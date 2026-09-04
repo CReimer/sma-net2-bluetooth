@@ -1,0 +1,112 @@
+{
+  "services": {
+    "import_archive": {
+      "name": "Wechselrichterarchiv importieren",
+      "description": "Abgeschlossene Archivtage manuell in die Recorder-Statistik importieren. Vorhandene Stundenzeitpunkte werden ersetzt und nicht dupliziert.",
+      "fields": {
+        "days": {"name": "Abgeschlossene Tage", "description": "Anzahl der abgeschlossenen Tage vor heute."},
+        "config_entry_id": {"name": "Config-Entry-ID", "description": "Optional, wenn nur eine Anlage eingerichtet ist."}
+      }
+    },
+    "get_archive": {
+      "name": "Originales Fünf-Minuten-Archiv abrufen",
+      "description": "Alle unveränderten SMA-Archivpunkte ohne Interpolation oder Auffüllen zurückgeben; alle Wechselrichter eines Eintrags müssen dieselbe Zeitstempelreihe liefern.",
+      "fields": {
+        "start": {"name": "Beginn", "description": "Inklusiver Beginn mit Zeitzone."},
+        "end": {"name": "Ende", "description": "Exklusives Ende mit Zeitzone."},
+        "config_entry_id": {"name": "Config-Entry-ID", "description": "Optional, wenn nur eine Anlage eingerichtet ist."}
+      }
+    }
+  },
+  "config": {
+    "step": {
+      "user": {
+        "title": "SMA-Net2-Bluetooth-Anlage verbinden",
+        "description": "SMA-Geräte werden über den lokalen BlueZ-Adapter erkannt. Es wird ausschließlich der gewählte Wechselrichter geprüft. NetID 1 wird direkt konfiguriert; NetID 2–F kann das vollständige Netz bereitstellen. Sichtbare Geräte werden nie automatisch demselben Netz zugeordnet.",
+        "data": {
+          "bt_address": "Bluetooth-Adresse der Anlage",
+          "password": "Anlagenkennwort",
+          "connection_mode": "Verbindungsmodus",
+          "plant_name": "Anlagenname",
+          "scan_interval": "Abfrageintervall (Sekunden)"
+        }
+      },
+      "confirm": {
+        "title": "Erkannte SMA-Topologie bestätigen",
+        "description": "Erkannt: **NetID {net_id}**. Gewählter Modus: **{configured_mode}**; wirksamer Modus: **{effective_mode}**. Wechselrichter-Seriennummern: **{serials}**. Aktueller Root-Knoten: **{root}**. Mit Absenden wird der Eintrag erstellt."
+      },
+      "reconfigure": {
+        "title": "SMA-Net2-Eintrag neu konfigurieren",
+        "description": "Wähle einen physischen Wechselrichter und den gewünschten Betriebsmodus. Ein leeres Kennwort behält das vorhandene Kennwort. Vor jeder Änderung werden NetID und Seriennummern angezeigt.",
+        "data": {
+          "bt_address": "Bluetooth-Adresse",
+          "password": "Neues Kennwort (optional)",
+          "connection_mode": "Verbindungsmodus",
+          "plant_name": "Anlagenname",
+          "scan_interval": "Abfrageintervall (Sekunden)"
+        }
+      },
+      "reconfigure_confirm": {
+        "title": "Geänderte SMA-Topologie bestätigen",
+        "description": "Erkannt: **NetID {net_id}**. Gewählter Modus: **{configured_mode}**; wirksamer Modus: **{effective_mode}**. Wechselrichter-Seriennummern: **{serials}**. Aktueller Root-Knoten: **{root}**. Mit Absenden wird der Eintrag ohne Änderung seriennummernbasierter Identitäten aktualisiert und neu geladen."
+      }
+    },
+    "error": {
+      "cannot_connect": "Verbindung oder Anmeldung an der Anlage fehlgeschlagen",
+      "invalid_auth": "Das SMA-Benutzerkennwort ist ungültig",
+      "discovery_failed": "Die automatische Bluetooth-Classic-Suche ist fehlgeschlagen; bitte die Adresse manuell eingeben",
+      "invalid_address": "Bitte eine gültige Bluetooth-MAC-Adresse eingeben",
+      "nighttime": "SMA-Verbindungstests pausieren bis zum Sonnenaufgang",
+      "network_requires_netid_2_f": "Der vollständige Netzwerkmodus benötigt NetID 2–F; dieses Gerät meldet NetID 1",
+      "serial_overlap": "Mindestens eine erkannte Seriennummer wird noch von einem anderen SMA-Eintrag beansprucht. Dieser Eintrag muss zuerst bereinigt oder entfernt werden."
+    },
+    "abort": {
+      "already_configured": "Diese SMA-Net2-Bluetooth-Anlage ist bereits eingerichtet",
+      "cannot_connect": "Die erkannte SMA-Sitzung ist nicht mehr verfügbar; bitte den Dialog erneut starten",
+      "reconfigure_successful": "[%key:common::config_flow::abort::reconfigure_successful%]"
+    }
+  },
+  "selector": {
+    "connection_mode": {
+      "options": {
+        "auto": "Automatisch anhand der NetID",
+        "single": "Nur gewählter Wechselrichter",
+        "network": "Vollständiges Bluetooth-Netz"
+      }
+    }
+  },
+  "issues": {
+    "serial_overlap": {
+      "title": "SMA-Wechselrichter {serial} gehört zu mehreren Einträgen",
+      "fix_flow": {
+        "step": {"init": {"title": "Doppelte SMA-Zuordnung lösen", "description": "Die Seriennummer **{serial}** wird beansprucht von: {entries}. Entferne oder konfiguriere den unerwünschten Eintrag neu und sende diese Reparatur danach erneut ab. Entity-IDs und Recorder-Historie wechseln erst, wenn genau ein Eintrag die Seriennummer beansprucht."}},
+        "error": {"still_present": "Die Seriennummer wird weiterhin von mehreren Einträgen beansprucht"}
+      }
+    },
+    "network_to_single": {
+      "title": "SMA-Netz wechselte von NetID {old_net_id} zu {new_net_id}",
+      "fix_flow": {
+        "step": {"init": {"title": "SMA-Netzeintrag sicher aufteilen", "description": "Konfiguriere **{entry}** mit einer Wechselrichteradresse auf `single` oder `auto` um. Füge danach jeden weiteren Wechselrichter als eigenen Eintrag hinzu. Vorhandene seriennummernbasierte Entity-IDs bleiben registriert und wechseln beim Einrichten des neuen Eigentümers. Sende danach erneut ab."}},
+        "error": {"still_present": "Der Eintrag wurde noch nicht für die erkannte NetID neu konfiguriert"}
+      }
+    },
+    "single_to_network": {
+      "title": "SMA-Wechselrichter trat NetID {new_net_id} bei",
+      "fix_flow": {
+        "step": {"init": {"title": "SMA-Einträge sicher zusammenführen", "description": "Entferne zuerst den anderen Einzeleintrag dieser Anlage. Konfiguriere **{entry}** danach auf `network` oder `auto` um. Beim Entfernen werden die Seriennummern-Registries vor der Home-Assistant-Bereinigung auf den passenden verbleibenden Eintrag übertragen. Sende nach beiden Schritten erneut ab."}},
+        "error": {"still_present": "Die Einträge wurden noch nicht für die erkannte NetID zusammengeführt"}
+      }
+    },
+    "netid_changed": {
+      "title": "SMA-NetID wechselte von {old_net_id} zu {new_net_id}",
+      "fix_flow": {
+        "step": {"init": {"title": "Geänderte SMA-NetID bestätigen", "description": "Konfiguriere **{entry}** neu und bestätige NetID **{new_net_id}**, Modus und erkannte Seriennummern. Sende danach erneut ab."}},
+        "error": {"still_present": "Die geänderte NetID wurde noch nicht bestätigt"}
+      }
+    },
+    "bluetooth_recovery_failed": {
+      "title": "SMA-Bluetooth-Wiederherstellung fehlgeschlagen",
+      "description": "Die SMA-Kommunikation über **{address}** blieb auch nach dem automatischen Aus- und Einschalten des lokalen Bluetooth-Adapters nicht verfügbar. Prüfe Adapter und Stromversorgung der Wechselrichter und lade anschließend die SMA-Integration neu. Die Integration versucht die Verbindung weiterhin automatisch."
+    }
+  }
+}

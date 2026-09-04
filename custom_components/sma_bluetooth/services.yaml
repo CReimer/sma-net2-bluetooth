@@ -1,0 +1,52 @@
+import_archive:
+  name: Import inverter archive
+  description: >-
+    Manually imports completed days from the inverter archive into the hourly
+    Recorder statistics of the total-energy sensors. Existing timestamps are
+    replaced deterministically, so running the same import again creates no
+    duplicates. The previous completed day is also reconciled automatically
+    after the first successful poll of each new day.
+  fields:
+    days:
+      name: Completed days
+      description: Number of completed days before today to import.
+      required: true
+      default: 3
+      selector:
+        number:
+          min: 1
+          max: 62
+          step: 1
+          mode: box
+    config_entry_id:
+      name: Config entry ID
+      description: Optional; leave empty when only one SMA plant is configured.
+      required: false
+      selector:
+        text:
+get_archive:
+  name: Get official five-minute archive
+  description: >-
+    Reads and returns every original five-minute archive point from every SMA
+    inverter in the plant. No values are interpolated, padded, aggregated or
+    stored. All inverters managed by the selected entry must return the same
+    complete timestamp series.
+  fields:
+    start:
+      name: Start
+      description: Inclusive start with timezone.
+      required: true
+      selector:
+        datetime:
+    end:
+      name: End
+      description: Exclusive end with timezone; at most 62 days after start.
+      required: true
+      selector:
+        datetime:
+    config_entry_id:
+      name: Config entry ID
+      description: Optional; leave empty when only one SMA plant is configured.
+      required: false
+      selector:
+        text:

@@ -1,0 +1,13 @@
+{
+  "domain": "sma_bluetooth",
+  "name": "SMA-Net2 Bluetooth",
+  "codeowners": ["@CReimer"],
+  "config_flow": true,
+  "dependencies": ["bluetooth_adapters", "recorder"],
+  "documentation": "https://github.com/CReimer/sma-net2-bluetooth",
+  "integration_type": "hub",
+  "iot_class": "local_polling",
+  "issue_tracker": "https://github.com/CReimer/sma-net2-bluetooth/issues",
+  "requirements": [],
+  "version": "0.2.0"
+}

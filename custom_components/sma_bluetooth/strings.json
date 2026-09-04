@@ -1,0 +1,132 @@
+{
+  "services": {
+    "import_archive": {
+      "name": "Import inverter archive",
+      "description": "Manually import completed archive days into Recorder statistics. Existing hourly timestamps are replaced and are not duplicated.",
+      "fields": {
+        "days": {"name": "Completed days", "description": "Number of completed days before today."},
+        "config_entry_id": {"name": "Config entry ID", "description": "Optional when only one plant is configured."}
+      }
+    },
+    "get_archive": {
+      "name": "Get official five-minute archive",
+      "description": "Return every original SMA archive point without interpolation or padding; all inverters in an entry must return the same timestamp series.",
+      "fields": {
+        "start": {"name": "Start", "description": "Inclusive start with timezone."},
+        "end": {"name": "End", "description": "Exclusive end with timezone."},
+        "config_entry_id": {"name": "Config entry ID", "description": "Optional when only one plant is configured."}
+      }
+    }
+  },
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect an SMA-Net2 Bluetooth plant",
+        "description": "Nearby SMA devices are detected through the local BlueZ adapter. Select exactly the inverter you want to test. NetID 1 is configured directly; NetID 2-F can expose the complete network. Nearby devices are never assumed to share a network.",
+        "data": {
+          "bt_address": "Plant Bluetooth address",
+          "password": "Installer/user password",
+          "connection_mode": "Connection mode",
+          "plant_name": "Plant name",
+          "scan_interval": "Polling interval (seconds)"
+        }
+      },
+      "confirm": {
+        "title": "Confirm detected SMA topology",
+        "description": "Detected **NetID {net_id}**. Configured mode: **{configured_mode}**; effective mode: **{effective_mode}**. Inverter serials: **{serials}**. Current root: **{root}**. Submit to create this entry."
+      },
+      "reconfigure": {
+        "title": "Reconfigure an SMA-Net2 entry",
+        "description": "Select one physical inverter and the intended operating mode. Leave the password empty to retain the current password. The detected NetID and serials are shown before anything changes.",
+        "data": {
+          "bt_address": "Bluetooth address",
+          "password": "New password (optional)",
+          "connection_mode": "Connection mode",
+          "plant_name": "Plant name",
+          "scan_interval": "Polling interval (seconds)"
+        }
+      },
+      "reconfigure_confirm": {
+        "title": "Confirm changed SMA topology",
+        "description": "Detected **NetID {net_id}**. Configured mode: **{configured_mode}**; effective mode: **{effective_mode}**. Inverter serials: **{serials}**. Current root: **{root}**. Submit to update and reload this entry without changing serial-based entity identities."
+      }
+    },
+    "error": {
+      "cannot_connect": "Could not connect to the plant or log in",
+      "invalid_auth": "The SMA user password is invalid",
+      "discovery_failed": "Automatic Bluetooth Classic discovery failed; enter the address manually",
+      "invalid_address": "Enter a valid Bluetooth MAC address",
+      "nighttime": "SMA connection tests are paused until sunrise",
+      "network_requires_netid_2_f": "Full network mode requires NetID 2-F; this device reports NetID 1",
+      "serial_overlap": "At least one detected inverter serial is still claimed by another SMA entry. Resolve or remove that entry first."
+    },
+    "abort": {
+      "already_configured": "This SMA-Net2 Bluetooth plant is already configured",
+      "cannot_connect": "The detected SMA session is no longer available; start the flow again",
+      "reconfigure_successful": "[%key:common::config_flow::abort::reconfigure_successful%]"
+    }
+  },
+  "selector": {
+    "connection_mode": {
+      "options": {
+        "auto": "Automatic from NetID",
+        "single": "Selected inverter only",
+        "network": "Complete Bluetooth network"
+      }
+    }
+  },
+  "issues": {
+    "serial_overlap": {
+      "title": "SMA inverter {serial} belongs to multiple entries",
+      "fix_flow": {
+        "step": {
+          "init": {
+            "title": "Resolve duplicate SMA ownership",
+            "description": "Serial **{serial}** is claimed by: {entries}. Remove or reconfigure the unwanted entry, then submit this repair again. Entity IDs and Recorder history are transferred only after exactly one entry claims the serial."
+          }
+        },
+        "error": {"still_present": "The serial is still claimed by multiple entries"}
+      }
+    },
+    "network_to_single": {
+      "title": "SMA network changed from NetID {old_net_id} to {new_net_id}",
+      "fix_flow": {
+        "step": {
+          "init": {
+            "title": "Split the SMA network entry safely",
+            "description": "Reconfigure **{entry}** to `single` or `auto` with one inverter address. Afterwards add each remaining inverter as its own entry. Existing serial-based entity IDs remain registered and move when the new owner is configured. Submit again after the entry has been reconfigured."
+          }
+        },
+        "error": {"still_present": "The entry has not yet been reconfigured for the detected NetID"}
+      }
+    },
+    "single_to_network": {
+      "title": "SMA inverter joined NetID {new_net_id}",
+      "fix_flow": {
+        "step": {
+          "init": {
+            "title": "Consolidate SMA entries safely",
+            "description": "First remove the other single-inverter entry for this plant. Then reconfigure **{entry}** to `network` or `auto`. The removal hook transfers serial registries to the remaining matching entry before Home Assistant cleanup. Submit again after both actions."
+          }
+        },
+        "error": {"still_present": "The entries have not yet been consolidated for the detected NetID"}
+      }
+    },
+    "netid_changed": {
+      "title": "SMA NetID changed from {old_net_id} to {new_net_id}",
+      "fix_flow": {
+        "step": {
+          "init": {
+            "title": "Confirm the changed SMA NetID",
+            "description": "Reconfigure **{entry}** and confirm NetID **{new_net_id}**, mode, and detected serials. Submit again after reconfiguration."
+          }
+        },
+        "error": {"still_present": "The changed NetID has not yet been confirmed"}
+      }
+    },
+    "bluetooth_recovery_failed": {
+      "title": "SMA Bluetooth recovery failed",
+      "description": "SMA communication through **{address}** remained unavailable after the integration power-cycled the local Bluetooth adapter. Check the adapter and inverter power, then reload the SMA integration. The integration will keep retrying automatically."
+    }
+  }
+}
