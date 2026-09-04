@@ -16,6 +16,7 @@ import custom_components.sma_bluetooth as integration_module
 from custom_components.sma_bluetooth import coordinator as coordinator_module
 from custom_components.sma_bluetooth import config_flow as config_flow_module
 from custom_components.sma_bluetooth import daylight as daylight_module
+from custom_components.sma_bluetooth import device as device_module
 from custom_components.sma_bluetooth import gateway as gateway_module
 from custom_components.sma_bluetooth import ownership as ownership_module
 from custom_components.sma_bluetooth import protocol as protocol_module
@@ -507,6 +508,27 @@ class SMASensorSemanticsTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(after["via_device"], hub_identifier(entry))
         self.assertEqual(before["identifiers"], after["identifiers"])
 
+    def test_inverter_device_uses_config_entry_scoped_hub_lookup(self) -> None:
+        entry = SimpleNamespace(
+            entry_id="entry-1", title="Roof", data={"plant_name": "Roof"}
+        )
+        inverter = SMAInverter(serial="123", network_role="root_node")
+        hub = SimpleNamespace(id="hub-device")
+        registry = SimpleNamespace(
+            async_get_device_by_identifier=MagicMock(return_value=hub)
+        )
+        coordinator = SimpleNamespace(
+            entry=entry, data={"123": inverter}, hass=SimpleNamespace()
+        )
+
+        with patch.object(device_module.dr, "async_get", return_value=registry):
+            info = inverter_device_info(coordinator, "123")
+
+        registry.async_get_device_by_identifier.assert_called_once_with(
+            hub_identifier(entry), "entry-1"
+        )
+        self.assertEqual(info["via_device_id"], "hub-device")
+
     def test_per_inverter_time_diagnostics_use_matching_receipt(self) -> None:
         inverter = SMAInverter(
             serial="123", record_timestamp=100, record_received_at=105.5
@@ -630,7 +652,7 @@ class SMAConfigMigrationOwnershipTests(unittest.IsolatedAsyncioTestCase):
         )
         device = SimpleNamespace(id="device-123", config_entry_id="old")
         device_registry = SimpleNamespace(
-            async_get_device=MagicMock(return_value=device),
+            async_get_devices=MagicMock(return_value=[device]),
             async_update_device=MagicMock(),
         )
         hass = SimpleNamespace(
@@ -656,6 +678,9 @@ class SMAConfigMigrationOwnershipTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(entity.unique_id, "sma_bluetooth_123_energy_total")
         device_registry.async_update_device.assert_called_once_with(
             "device-123", new_config_entry_id="new"
+        )
+        device_registry.async_get_devices.assert_called_once_with(
+            identifiers={("sma_bluetooth", "123")}
         )
 
     def test_overlap_keeps_existing_owner_and_creates_repair_path(self) -> None:

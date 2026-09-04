@@ -46,8 +46,8 @@ def inverter_device_info(
     inverter = coordinator.data[serial]
     hub = None
     if hasattr(coordinator, "hass"):
-        hub = dr.async_get(coordinator.hass).async_get_device(
-            identifiers={hub_identifier(coordinator.entry)}
+        hub = dr.async_get(coordinator.hass).async_get_device_by_identifier(
+            hub_identifier(coordinator.entry), coordinator.entry.entry_id
         )
     info = DeviceInfo(
         identifiers={(DOMAIN, serial)},

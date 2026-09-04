@@ -102,8 +102,16 @@ def _move_serial_registries(
             )
 
     device_registry = dr.async_get(hass)
-    device = device_registry.async_get_device(identifiers={(DOMAIN, serial)})
-    if device is not None and device.config_entry_id != owner_entry_id:
+    devices = device_registry.async_get_devices(identifiers={(DOMAIN, serial)})
+    device = next(
+        (
+            candidate
+            for candidate in devices
+            if candidate.config_entry_id != owner_entry_id
+        ),
+        None,
+    )
+    if device is not None:
         device_registry.async_update_device(
             device.id, new_config_entry_id=owner_entry_id
         )
