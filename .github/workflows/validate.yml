@@ -19,7 +19,9 @@ jobs:
       - uses: hacs/action@main
         with:
           category: integration
-          ignore: description issues topics
+          # Local brand assets are supported by Home Assistant 2026.3+.
+          # HACS still checks for a separate home-assistant/brands entry.
+          ignore: brands
 
   hassfest:
     name: hassfest
