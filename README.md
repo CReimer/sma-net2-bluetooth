@@ -126,3 +126,19 @@ use does not imply endorsement of or affiliation with this project.
 
 This notice follows the convention used by
 [Home Assistant Brands](https://github.com/home-assistant/brands#trademark-legal-notices).
+
+## Tests and coverage
+
+Use Python 3.14 and the pinned Home Assistant test dependencies:
+
+```bash
+python -m pip install -r requirements-test.txt
+python tools/run_tests.py
+```
+
+The suite mocks device and external service access; Blink also exercises a local
+TCP relay. Every integration Python module is included in coverage, including
+modules not imported by tests. The test command and GitHub Actions both require
+at least **91% line coverage and 91% branch coverage**, checked separately without
+rounding. HTML, XML and JSON reports are written to `coverage-report/` and uploaded
+as the `coverage` artifact by CI.
