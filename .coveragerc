@@ -1,0 +1,7 @@
+[run]
+branch = True
+source = custom_components/sma_bluetooth
+
+[report]
+show_missing = True
+precision = 2
