@@ -121,6 +121,12 @@ class RecordTests(unittest.TestCase):
 
 class TransportTests(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
+        # setup-python builds may omit Bluetooth constants. The socket itself is
+        # mocked, so the transport tests must not depend on host BlueZ support.
+        for name, value in (("AF_BLUETOOTH", 31), ("BTPROTO_RFCOMM", 3)):
+            replacement = patch.object(p.socket, name, value, create=True)
+            replacement.start()
+            self.addCleanup(replacement.stop)
         self.client = p.SMAClassicClient("AA:BB:CC:DD:EE:FF", "p")
 
     async def test_socket_connect_receive_send_and_close(self):
