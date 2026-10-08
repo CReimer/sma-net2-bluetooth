@@ -99,7 +99,7 @@ Run the tests against the pinned Home Assistant release:
 
 ```bash
 python -m pip install -r requirements-test.txt
-python -m unittest discover -s tests -t .
+python tools/run_tests.py
 ```
 
 The integration was developed with substantial assistance from generative AI.
@@ -136,9 +136,148 @@ python -m pip install -r requirements-test.txt
 python tools/run_tests.py
 ```
 
-The suite mocks device and external service access; Blink also exercises a local
-TCP relay. Every integration Python module is included in coverage, including
+The suite mocks Bluetooth and external service access and exercises config
+flows through Home Assistant’s real flow manager. Every integration Python module is included in coverage, including
 modules not imported by tests. The test command and GitHub Actions both require
 at least **91% line coverage and 91% branch coverage**, checked separately without
 rounding. HTML, XML and JSON reports are written to `coverage-report/` and uploaded
-as the `coverage` artifact by CI.
+as the `coverage` artifact by CI. Config-flow line and branch coverage must each
+be 100%, enforced separately from the overall gate.
+
+## Set up the connection
+
+Set up during daylight: the inverters shut down at night and connection tests
+intentionally wait until sunrise.
+
+1. After installation, open **Settings > Devices & services > Add integration**
+   and select **SMA-Net2 Bluetooth**.
+2. Select the physical inverter from discovery, or enter its Bluetooth Classic
+   address manually if discovery fails (format `AA:BB:CC:DD:EE:FF`).
+3. Enter the **SMA user password**. This is not a Bluetooth pairing PIN and not
+   the installer password. The client logs in with SMA's user role.
+4. Select **Automatic**, unless you specifically want one inverter or a full
+   network. Full network mode requires NetID 2–F.
+5. Set a plant display name and polling interval. The default and minimum
+   interval are 60 seconds. Longer intervals reduce radio traffic. Only daylight
+   polling uses this interval; at night the next poll is scheduled for sunrise.
+6. Review the detected NetID, mode, inverter serials and current root node,
+   then submit the confirmation. Assign the devices to areas as desired.
+
+If connection, authentication or discovery fails, correct the settings and
+submit again. A failed connection test does not create an entry. Inverters
+already owned by an existing entry cannot be configured a second time, even
+through another Bluetooth node. For NetID 1, add each separate inverter in its
+own entry.
+
+To change settings, use the entry menu under **Settings > Devices & services >
+SMA-Net2 Bluetooth > Reconfigure**. An empty password retains the stored
+password. The new topology is tested and confirmed before changes are applied.
+Connection settings are stored in entry data; display name, polling interval
+and the identity cache are stored in entry options. Existing entries migrate
+automatically without changing entity unique IDs or statistics.
+
+## Use archive actions
+
+Open **Developer tools > Actions** and select one of these actions. Operations
+require daylight and a reachable inverter. If `config_entry_id` is omitted,
+**all loaded SMA entries** are queried. Supply an entry ID to select one plant.
+An unavailable or unknown selection produces an error rather than a silent
+empty response.
+
+### Read original archive points
+
+`sma_bluetooth.get_archive` requires `start` (inclusive) and `end` (exclusive),
+each with a timezone and aligned to a five-minute boundary. End must be after
+start and the range may cover at most 62 days (allowing a daylight-saving hour).
+`config_entry_id` is optional.
+
+```yaml
+action: sma_bluetooth.get_archive
+data:
+  start: "2026-10-01T00:00:00+02:00"
+  end: "2026-10-02T00:00:00+02:00"
+response_variable: archive
+```
+
+The required response contains `start`, `end` and `plants`, keyed by entry ID.
+Each plant includes `requested_slots`, `complete` and `inverters`, keyed by
+serial. Each inverter contains `count` and `points`; each point contains a Unix
+`timestamp`, `total_energy_kwh` and `power_w` (which can be null). No statistics
+are written. Different timestamp series between inverters cause an error;
+`complete` reports whether all expected slots were returned. For today's data,
+the expected series extends only through its latest returned point.
+
+### Import completed days
+
+`sma_bluetooth.import_archive` accepts `days` from 1 to 62 (default 3), counting
+backwards from yesterday, and optional `config_entry_id`.
+
+```yaml
+action: sma_bluetooth.import_archive
+data:
+  days: 3
+response_variable: imported
+```
+
+The optional response is `imported_hourly_statistics`, mapping each total-energy
+entity ID to its imported hourly count. This action writes Recorder statistics;
+existing hourly timestamps are replaced. It requires a complete five-minute
+series for every managed inverter and registered total-energy sensors. It does
+not fabricate missing readings. The previous completed day is also reconciled
+automatically after a successful daylight poll. That reconciliation checks the
+plant clock and can correct it within the protocol's safety limits.
+
+## Triggers and conditions
+
+The integration provides an **Events** entity for each inverter, with
+`warning`, `fault`, `grid_connected` and `grid_disconnected` event types. Events
+are emitted on observed status changes, not on every poll; short changes
+between polls may not be observed. Warning/fault events carry `previous_status`
+and `status`; grid events carry `previous_status` and the current `status`.
+
+Use a Home Assistant state trigger on the inverter's event entity and check
+its `event_type` attribute. Replace the example entity ID with your actual one.
+
+```yaml
+triggers:
+  - trigger: state
+    entity_id: event.sma_123_events
+conditions:
+  - condition: template
+    value_template: "{{ trigger.to_state is not none and trigger.to_state.attributes.get('event_type') == 'fault' }}"
+actions:
+  - action: persistent_notification.create
+    data:
+      title: SMA inverter fault
+      message: "Check the inverter and its status sensor."
+```
+
+There are no integration-specific device triggers or conditions. Standard
+Home Assistant state, numeric-state and template conditions can use the power,
+energy and status sensors. Sleeping inverter entities become unavailable.
+
+## Remove the integration
+
+1. Open **Settings > Devices & services > SMA-Net2 Bluetooth**.
+2. Open the menu of the entry to remove and select **Delete**. Repeat for each
+   plant entry if removing the entire integration.
+3. Remove or update dashboards, automations and Energy dashboard references
+   that use its entities. Deleting an entry does not erase Recorder history.
+4. To uninstall the custom integration, remove it through HACS, or remove the
+   `custom_components/sma_bluetooth` folder for a manual installation, and
+   restart Home Assistant.
+
+Removal ends polling and cancels the entry's background work. It does not
+reset inverter settings or change the physical NetID. When resolving duplicate
+legacy entries, follow the Repairs instructions to preserve registry ownership.
+
+## Quality scale status
+
+The implementation is being checked against the Home Assistant
+[Bronze checklist](https://developers.home-assistant.io/docs/core/integration-quality-scale/checklist/).
+See [quality_scale.yaml](custom_components/sma_bluetooth/quality_scale.yaml)
+for rule-by-rule evidence and remaining upstream work. This is a **custom
+integration**, not an officially awarded Bronze integration. The official
+rating requires Home Assistant core inclusion and review. Local brand assets
+are supplied for modern Home Assistant; an upstream `sma_bluetooth` brands
+entry still needs to be accepted for the official checklist.

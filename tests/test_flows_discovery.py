@@ -1,11 +1,15 @@
 """Discovery cleanup and configuration error/confirmation contracts."""
 
 import asyncio
-from types import SimpleNamespace as NS
 import unittest
+from types import SimpleNamespace as NS
 from unittest.mock import AsyncMock, Mock, patch
+
 from dbus_fast import Variant
-from custom_components.sma_bluetooth import config_flow as cf, discovery as d, repairs
+
+from custom_components.sma_bluetooth import config_flow as cf
+from custom_components.sma_bluetooth import discovery as d
+from custom_components.sma_bluetooth import repairs
 from custom_components.sma_bluetooth.const import (
     CONF_BT_ADDRESS,
     CONF_CONNECTION_MODE,
@@ -14,19 +18,21 @@ from custom_components.sma_bluetooth.const import (
     CONF_SELECTED_SERIAL,
     EFFECTIVE_MODE_SINGLE,
 )
+from custom_components.sma_bluetooth.gateway import SMADaylightError
 from custom_components.sma_bluetooth.models import SMAInverter
 from custom_components.sma_bluetooth.protocol import (
     SMAAuthenticationError,
-    SMAProtocolError,
     SMANetworkModeError,
+    SMAProtocolError,
 )
-from custom_components.sma_bluetooth.gateway import SMADaylightError
 
 
 class FlowTests(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         self.flow = cf.SMABluetoothConfigFlow()
-        self.flow.hass = NS()
+        self.flow.hass = NS(
+            config_entries=NS(async_entry_for_domain_unique_id=lambda *args: None)
+        )
         self.data = {
             CONF_BT_ADDRESS: "aa:bb:cc:dd:ee:ff",
             "password": "p",
@@ -163,9 +169,11 @@ class FlowTests(unittest.IsolatedAsyncioTestCase):
         async def run(hass, address, password, mode, operation, **kwargs):
             return await operation(client)
 
-        with patch.object(cf, "async_get_adapter_gate", return_value=NS(async_run=run)):
-            with self.assertRaises(SMAProtocolError):
-                await self.flow._async_probe(self.data)
+        with (
+            patch.object(cf, "async_get_adapter_gate", return_value=NS(async_run=run)),
+            self.assertRaises(SMAProtocolError),
+        ):
+            await self.flow._async_probe(self.data)
 
     async def test_repairs_stay_open_until_issue_resolved(self):
         flow = await repairs.async_create_fix_flow(
@@ -237,13 +245,15 @@ class DiscoveryTests(unittest.IsolatedAsyncioTestCase):
         bus.disconnect.assert_called_once()
 
     async def test_discovery_errors_and_cancellation_disconnect(self):
-        with patch.object(
-            d,
-            "MessageBus",
-            return_value=NS(connect=AsyncMock(side_effect=OSError("bus"))),
+        with (
+            patch.object(
+                d,
+                "MessageBus",
+                return_value=NS(connect=AsyncMock(side_effect=OSError("bus"))),
+            ),
+            self.assertRaisesRegex(d.SMADiscoveryError, "Unable to connect"),
         ):
-            with self.assertRaisesRegex(d.SMADiscoveryError, "Unable to connect"):
-                await d.async_discover_sma_devices()
+            await d.async_discover_sma_devices()
         for error in (None, RuntimeError("introspect"), asyncio.CancelledError()):
             manager = NS(call_get_managed_objects=AsyncMock(return_value={}))
             bus = NS(
@@ -253,13 +263,51 @@ class DiscoveryTests(unittest.IsolatedAsyncioTestCase):
                 ),
                 disconnect=Mock(),
             )
-            with patch.object(
-                d, "MessageBus", return_value=NS(connect=AsyncMock(return_value=bus))
-            ):
-                with self.assertRaises(
+            with (
+                patch.object(
+                    d,
+                    "MessageBus",
+                    return_value=NS(connect=AsyncMock(return_value=bus)),
+                ),
+                self.assertRaises(
                     asyncio.CancelledError
                     if isinstance(error, asyncio.CancelledError)
                     else d.SMADiscoveryError
-                ):
-                    await d.async_discover_sma_devices()
+                ),
+            ):
+                await d.async_discover_sma_devices()
             bus.disconnect.assert_called_once()
+
+
+class ProbeMetadataTests(unittest.IsolatedAsyncioTestCase):
+    async def test_probe_rejects_empty_inverters_or_incomplete_metadata(self):
+        flow = cf.SMABluetoothConfigFlow()
+        flow.hass = NS()
+        data = {
+            "bt_address": "AA:BB:CC:DD:EE:FF",
+            "password": "p",
+            "connection_mode": "auto",
+        }
+        for inverters, net_id, mode in (
+            ({}, 1, "single"),
+            ({"1": SMAInverter(serial="1")}, None, "single"),
+            ({"1": SMAInverter(serial="1")}, 1, None),
+        ):
+            client = NS(
+                async_query_active=AsyncMock(return_value=inverters),
+                net_id=net_id,
+                effective_mode=mode,
+            )
+
+            async def run(
+                hass, address, password, mode, operation, *, client=client, **kwargs
+            ):
+                return await operation(client)
+
+            with (
+                patch.object(
+                    cf, "async_get_adapter_gate", return_value=NS(async_run=run)
+                ),
+                self.assertRaises(SMAProtocolError),
+            ):
+                await flow._async_probe(data)

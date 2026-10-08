@@ -9,7 +9,7 @@ Run the test suite before submitting a pull request:
 
 ```bash
 python -m pip install -r requirements-test.txt
-python -m unittest discover -s tests -t .
+python tools/run_tests.py
 ```
 
 Contributions must be compatible with `GPL-3.0-or-later`. Protocol changes

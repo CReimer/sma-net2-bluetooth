@@ -3,13 +3,12 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+from itertools import pairwise
 
 from .protocol import SMAArchivePoint
 
 
-def completed_day_periods(
-    local_today: datetime, days: int
-) -> list[tuple[int, int]]:
+def completed_day_periods(local_today: datetime, days: int) -> list[tuple[int, int]]:
     """Return exact local-midnight periods for completed days, oldest first."""
     if local_today.tzinfo is None or local_today.utcoffset() is None:
         raise ValueError("local_today must be timezone-aware")
@@ -69,15 +68,13 @@ def cumulative_statistic_sums(
         return new - old if new >= old else new
 
     increments = [0.0]
-    for old, new in zip(states, states[1:]):
+    for old, new in pairwise(states):
         increments.append(increments[-1] + increase(old, new))
 
     if previous is not None:
         first_sum = previous[1] + increase(previous[0], states[0])
     elif following is not None:
-        first_sum = following[1] - (
-            increments[-1] + increase(states[-1], following[0])
-        )
+        first_sum = following[1] - (increments[-1] + increase(states[-1], following[0]))
     else:
         first_sum = 0.0
 

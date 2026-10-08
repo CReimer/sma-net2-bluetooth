@@ -31,9 +31,7 @@ def daylight_schedule(
         return DaylightSchedule(True)
 
     try:
-        sunrise = sun.get_astral_event_next(
-            hass, SUN_EVENT_SUNRISE, current
-        )
+        sunrise = sun.get_astral_event_next(hass, SUN_EVENT_SUNRISE, current)
     except ValueError:
         return DaylightSchedule(False, POLAR_NIGHT_RECHECK_INTERVAL)
 

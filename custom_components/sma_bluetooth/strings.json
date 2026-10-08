@@ -4,17 +4,32 @@
       "name": "Import inverter archive",
       "description": "Manually import completed archive days into Recorder statistics. Existing hourly timestamps are replaced and are not duplicated.",
       "fields": {
-        "days": {"name": "Completed days", "description": "Number of completed days before today."},
-        "config_entry_id": {"name": "Config entry ID", "description": "Optional when only one plant is configured."}
+        "days": {
+          "name": "Completed days",
+          "description": "Number of completed days before today."
+        },
+        "config_entry_id": {
+          "name": "Config entry ID",
+          "description": "Optional; leave empty to use all loaded SMA entries."
+        }
       }
     },
     "get_archive": {
       "name": "Get official five-minute archive",
       "description": "Return every original SMA archive point without interpolation or padding; all inverters in an entry must return the same timestamp series.",
       "fields": {
-        "start": {"name": "Start", "description": "Inclusive start with timezone."},
-        "end": {"name": "End", "description": "Exclusive end with timezone."},
-        "config_entry_id": {"name": "Config entry ID", "description": "Optional when only one plant is configured."}
+        "start": {
+          "name": "Start",
+          "description": "Inclusive start with timezone."
+        },
+        "end": {
+          "name": "End",
+          "description": "Exclusive end with timezone."
+        },
+        "config_entry_id": {
+          "name": "Config entry ID",
+          "description": "Optional; leave empty to use all loaded SMA entries."
+        }
       }
     }
   },
@@ -25,10 +40,17 @@
         "description": "Nearby SMA devices are detected through the local BlueZ adapter. Select exactly the inverter you want to test. NetID 1 is configured directly; NetID 2-F can expose the complete network. Nearby devices are never assumed to share a network.",
         "data": {
           "bt_address": "Plant Bluetooth address",
-          "password": "Installer/user password",
+          "password": "SMA user password",
           "connection_mode": "Connection mode",
           "plant_name": "Plant name",
           "scan_interval": "Polling interval (seconds)"
+        },
+        "data_description": {
+          "bt_address": "Bluetooth Classic address of the selected inverter (AA:BB:CC:DD:EE:FF).",
+          "password": "The SMA user password of the inverter, not a Bluetooth pairing PIN.",
+          "connection_mode": "Automatic uses direct mode for NetID 1 and network mode for NetID 2–F. Single mode reads only the selected inverter.",
+          "plant_name": "Display name for this configuration entry and plant device.",
+          "scan_interval": "Daylight polling interval in seconds (minimum 60). Polling pauses until sunrise at night."
         }
       },
       "confirm": {
@@ -44,6 +66,13 @@
           "connection_mode": "Connection mode",
           "plant_name": "Plant name",
           "scan_interval": "Polling interval (seconds)"
+        },
+        "data_description": {
+          "bt_address": "Bluetooth Classic address of the selected inverter (AA:BB:CC:DD:EE:FF).",
+          "password": "The SMA user password of the inverter, not a Bluetooth pairing PIN. Leave empty to keep the current password.",
+          "connection_mode": "Automatic uses direct mode for NetID 1 and network mode for NetID 2–F. Single mode reads only the selected inverter.",
+          "plant_name": "Display name for this configuration entry and plant device.",
+          "scan_interval": "Daylight polling interval in seconds (minimum 60). Polling pauses until sunrise at night."
         }
       },
       "reconfigure_confirm": {
@@ -85,7 +114,9 @@
             "description": "Serial **{serial}** is claimed by: {entries}. Remove or reconfigure the unwanted entry, then submit this repair again. Entity IDs and Recorder history are transferred only after exactly one entry claims the serial."
           }
         },
-        "error": {"still_present": "The serial is still claimed by multiple entries"}
+        "error": {
+          "still_present": "The serial is still claimed by multiple entries"
+        }
       }
     },
     "network_to_single": {
@@ -97,7 +128,9 @@
             "description": "Reconfigure **{entry}** to `single` or `auto` with one inverter address. Afterwards add each remaining inverter as its own entry. Existing serial-based entity IDs remain registered and move when the new owner is configured. Submit again after the entry has been reconfigured."
           }
         },
-        "error": {"still_present": "The entry has not yet been reconfigured for the detected NetID"}
+        "error": {
+          "still_present": "The entry has not yet been reconfigured for the detected NetID"
+        }
       }
     },
     "single_to_network": {
@@ -109,7 +142,9 @@
             "description": "First remove the other single-inverter entry for this plant. Then reconfigure **{entry}** to `network` or `auto`. The removal hook transfers serial registries to the remaining matching entry before Home Assistant cleanup. Submit again after both actions."
           }
         },
-        "error": {"still_present": "The entries have not yet been consolidated for the detected NetID"}
+        "error": {
+          "still_present": "The entries have not yet been consolidated for the detected NetID"
+        }
       }
     },
     "netid_changed": {
@@ -121,7 +156,9 @@
             "description": "Reconfigure **{entry}** and confirm NetID **{new_net_id}**, mode, and detected serials. Submit again after reconfiguration."
           }
         },
-        "error": {"still_present": "The changed NetID has not yet been confirmed"}
+        "error": {
+          "still_present": "The changed NetID has not yet been confirmed"
+        }
       }
     },
     "bluetooth_recovery_failed": {

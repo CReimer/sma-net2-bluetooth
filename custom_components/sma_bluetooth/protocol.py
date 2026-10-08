@@ -13,11 +13,12 @@ framing and SMA record parsing itself.
 from __future__ import annotations
 
 import asyncio
-from dataclasses import dataclass
 import random
 import socket
 import struct
 import time
+from dataclasses import dataclass
+from typing import Self
 
 from .const import (
     CONNECTION_MODE_AUTO,
@@ -279,7 +280,7 @@ class SMAClassicClient:
             return self.format_bluetooth_address(self.root_address)
         return None
 
-    async def __aenter__(self) -> SMAClassicClient:
+    async def __aenter__(self) -> Self:
         if not hasattr(socket, "AF_BLUETOOTH"):
             raise SMAProtocolError("Python has no Bluetooth socket support")
         self.sock = socket.socket(

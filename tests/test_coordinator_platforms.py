@@ -1,16 +1,26 @@
 """Coordinator metadata guards, entity state and diagnostic contracts."""
 
+import unittest
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace as NS
-import unittest
 from unittest.mock import AsyncMock, Mock, patch
+
+from homeassistant.config_entries import ConfigEntryState
+from homeassistant.exceptions import ConfigEntryError
 from homeassistant.helpers.update_coordinator import UpdateFailed
+
 from custom_components.sma_bluetooth import (
     coordinator as c,
-    sensor as s,
-    event as e,
-    diagnostics,
+)
+from custom_components.sma_bluetooth import (
     device,
+    diagnostics,
+)
+from custom_components.sma_bluetooth import (
+    event as e,
+)
+from custom_components.sma_bluetooth import (
+    sensor as s,
 )
 from custom_components.sma_bluetooth.const import (
     CONF_NET_ID,
@@ -21,12 +31,12 @@ from custom_components.sma_bluetooth.const import (
     NETWORK_ROLE_PARTICIPANT,
     NETWORK_ROLE_ROOT,
 )
+from custom_components.sma_bluetooth.gateway import SMADaylightError
 from custom_components.sma_bluetooth.models import SMAInverter
 from custom_components.sma_bluetooth.protocol import (
-    SMAProtocolError,
     SMANetworkModeError,
+    SMAProtocolError,
 )
-from custom_components.sma_bluetooth.gateway import SMADaylightError
 
 
 def make_coordinator():
@@ -35,6 +45,8 @@ def make_coordinator():
         title="Plant",
         data={"bt_address": "AA", "password": "p"},
         options={},
+        minor_version=1,
+        state=ConfigEntryState.LOADED,
     )
 
     def update(entry, **changes):
@@ -55,6 +67,7 @@ def make_coordinator():
     coordinator.owned_serials = {"1"}
     coordinator.last_update_success = True
     coordinator.update_interval = timedelta(seconds=60)
+    entry.runtime_data = coordinator
     return coordinator
 
 
@@ -85,7 +98,11 @@ class CoordinatorTests(unittest.IsolatedAsyncioTestCase):
                     self.assertEqual(await co._async_update_data(), co.data)
                     self.assertTrue(co.sleeping)
                 else:
-                    with self.assertRaises(UpdateFailed):
+                    with self.assertRaises(
+                        ConfigEntryError
+                        if isinstance(failure, SMANetworkModeError)
+                        else UpdateFailed
+                    ):
                         await co._async_update_data()
                     self.assertEqual(
                         note.call_count, int(isinstance(failure, SMANetworkModeError))
@@ -309,4 +326,35 @@ class PlatformTests(unittest.IsolatedAsyncioTestCase):
             device.async_ensure_hub_device(co.hass, co.entry)
         self.assertEqual(
             registry.async_get_or_create.call_args.kwargs["config_entry_id"], "entry"
+        )
+
+
+class SetupErrorTests(unittest.IsolatedAsyncioTestCase):
+    async def test_permanent_errors_are_reported_and_polling_uses_options(self):
+        from homeassistant.exceptions import ConfigEntryAuthFailed
+
+        from custom_components.sma_bluetooth.protocol import (
+            SMAAuthenticationError,
+            SMAConfigurationError,
+        )
+
+        co = make_coordinator()
+        for error, expected in (
+            (SMAAuthenticationError("password"), ConfigEntryAuthFailed),
+            (SMAConfigurationError("topology"), ConfigEntryError),
+        ):
+            with (
+                patch.object(c, "daylight_schedule", return_value=NS(active=True)),
+                patch.object(co, "async_run_session", AsyncMock(side_effect=error)),
+                self.assertRaises(expected),
+            ):
+                await co._async_update_data()
+        co.entry.options["scan_interval"] = 180
+        with patch.object(
+            c.DataUpdateCoordinator, "__init__", return_value=None
+        ) as init:
+            reloaded = c.SMABluetoothCoordinator(co.hass, co.entry)
+        self.assertEqual(reloaded.daytime_interval, timedelta(seconds=180))
+        self.assertEqual(
+            init.call_args.kwargs["update_interval"], timedelta(seconds=180)
         )

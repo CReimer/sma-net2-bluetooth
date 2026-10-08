@@ -3,12 +3,11 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import datetime, timedelta
 import logging
+from datetime import datetime, timedelta
 from typing import Any
 
 import voluptuous as vol
-
 from homeassistant.components.recorder import get_instance
 from homeassistant.components.recorder.models.statistics import (
     StatisticData,
@@ -19,7 +18,7 @@ from homeassistant.components.recorder.statistics import (
     async_import_statistics,
     statistics_during_period,
 )
-from homeassistant.config_entries import ConfigEntry
+from homeassistant.config_entries import ConfigEntryState
 from homeassistant.const import UnitOfEnergy
 from homeassistant.core import HomeAssistant, ServiceCall, SupportsResponse, callback
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
@@ -38,6 +37,8 @@ from .archive import (
 from .const import (
     CONF_CONNECTION_MODE,
     CONF_KNOWN_INVERTERS,
+    CONF_PLANT_NAME,
+    CONF_SCAN_INTERVAL,
     CONF_SELECTED_SERIAL,
     CONNECTION_MODE_AUTO,
     CONNECTION_MODE_NETWORK,
@@ -45,7 +46,11 @@ from .const import (
     MAX_ARCHIVE_DAYS,
     PLATFORMS,
 )
-from .coordinator import SMABluetoothCoordinator, deserialize_known_inverters
+from .coordinator import (
+    SMABluetoothConfigEntry,
+    SMABluetoothCoordinator,
+    deserialize_known_inverters,
+)
 from .device import async_ensure_hub_device
 from .ownership import (
     async_reconcile_ownership,
@@ -209,7 +214,9 @@ async def _async_import_periods(
 
 
 async def _async_reconcile_previous_day(
-    hass: HomeAssistant, entry: ConfigEntry, coordinator: SMABluetoothCoordinator
+    hass: HomeAssistant,
+    entry: SMABluetoothConfigEntry,
+    coordinator: SMABluetoothCoordinator,
 ) -> None:
     """Reconcile the previous completed day after the first successful poll."""
     local_today = _local_today()
@@ -281,7 +288,9 @@ async def _async_reconcile_previous_day(
 
 
 def _schedule_archive_reconcile(
-    hass: HomeAssistant, entry: ConfigEntry, coordinator: SMABluetoothCoordinator
+    hass: HomeAssistant,
+    entry: SMABluetoothConfigEntry,
+    coordinator: SMABluetoothCoordinator,
 ) -> None:
     """Schedule one archive reconciliation without overlapping Bluetooth work."""
     if not coordinator.is_daylight():
@@ -312,7 +321,7 @@ async def async_setup(hass: HomeAssistant, config: dict[str, Any]) -> bool:
         entries = [
             entry
             for entry in hass.config_entries.async_entries(DOMAIN)
-            if entry.entry_id in hass.data.get(DOMAIN, {})
+            if entry.state is ConfigEntryState.LOADED
             and (requested_entry is None or entry.entry_id == requested_entry)
         ]
         if not entries:
@@ -322,7 +331,7 @@ async def async_setup(hass: HomeAssistant, config: dict[str, Any]) -> bool:
         imported: dict[str, int] = {}
 
         for entry in entries:
-            coordinator: SMABluetoothCoordinator = hass.data[DOMAIN][entry.entry_id]
+            coordinator: SMABluetoothCoordinator = entry.runtime_data
             imported.update(
                 await _async_import_periods(
                     hass,
@@ -367,7 +376,7 @@ async def async_setup(hass: HomeAssistant, config: dict[str, Any]) -> bool:
         entries = [
             entry
             for entry in hass.config_entries.async_entries(DOMAIN)
-            if entry.entry_id in hass.data.get(DOMAIN, {})
+            if entry.state is ConfigEntryState.LOADED
             and (requested_entry is None or entry.entry_id == requested_entry)
         ]
         if not entries:
@@ -386,7 +395,7 @@ async def async_setup(hass: HomeAssistant, config: dict[str, Any]) -> bool:
             "plants": {},
         }
         for entry in entries:
-            coordinator: SMABluetoothCoordinator = hass.data[DOMAIN][entry.entry_id]
+            coordinator: SMABluetoothCoordinator = entry.runtime_data
             try:
                 archive = await coordinator.async_read_archive(periods)
             except SMAProtocolError as err:
@@ -469,20 +478,22 @@ async def async_setup(hass: HomeAssistant, config: dict[str, Any]) -> bool:
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(
+    hass: HomeAssistant, entry: SMABluetoothConfigEntry
+) -> bool:
     """Set up SMA Bluetooth from a config entry."""
     coordinator = SMABluetoothCoordinator(hass, entry)
     await coordinator.async_config_entry_first_refresh()
     coordinator.owned_serials = async_reconcile_ownership(
         hass, entry, coordinator.data or coordinator._known_inverters
     )
-    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
+    entry.runtime_data = coordinator
     async_ensure_hub_device(hass, entry)
     try:
         await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     except BaseException:
         await coordinator.async_disconnect()
-        hass.data[DOMAIN].pop(entry.entry_id, None)
+        del entry.runtime_data
         raise
     coordinator.archive_listener_remove = coordinator.async_add_listener(
         lambda: _schedule_archive_reconcile(hass, entry, coordinator)
@@ -501,37 +512,45 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return True
 
 
-async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_migrate_entry(
+    hass: HomeAssistant, entry: SMABluetoothConfigEntry
+) -> bool:
     """Migrate legacy address-based entries to explicit topology schema v2."""
     if entry.version > 2:
         return False
-    if entry.version == 2:
+    if entry.version == 2 and entry.minor_version >= 1:
         return True
 
-    known = deserialize_known_inverters(
-        entry.options.get(CONF_KNOWN_INVERTERS, entry.data.get(CONF_KNOWN_INVERTERS))
-    )
-    connection_mode = (
-        CONNECTION_MODE_NETWORK if len(known) > 1 else CONNECTION_MODE_AUTO
-    )
-    migrated_data = {**entry.data, CONF_CONNECTION_MODE: connection_mode}
-    if len(known) == 1:
-        migrated_data[CONF_SELECTED_SERIAL] = next(iter(known))
+    migrated_data = dict(entry.data)
+    if entry.version == 1:
+        known = deserialize_known_inverters(
+            entry.options.get(
+                CONF_KNOWN_INVERTERS, entry.data.get(CONF_KNOWN_INVERTERS)
+            )
+        )
+        migrated_data[CONF_CONNECTION_MODE] = (
+            CONNECTION_MODE_NETWORK if len(known) > 1 else CONNECTION_MODE_AUTO
+        )
+        if len(known) == 1:
+            migrated_data[CONF_SELECTED_SERIAL] = next(iter(known))
+    options = dict(entry.options)
+    for key in (CONF_PLANT_NAME, CONF_SCAN_INTERVAL, CONF_KNOWN_INVERTERS):
+        if key in migrated_data:
+            options.setdefault(key, migrated_data.pop(key))
     hass.config_entries.async_update_entry(
         entry,
         data=migrated_data,
+        options=options,
         version=2,
+        minor_version=1,
     )
-    _LOGGER.info(
-        "Migrated SMA entry %s to schema v2 using %s mode for %s known inverter(s)",
-        entry.entry_id,
-        connection_mode,
-        len(known),
-    )
+    _LOGGER.info("Migrated SMA entry %s to schema v2.1", entry.entry_id)
     return True
 
 
-async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
+async def async_remove_entry(
+    hass: HomeAssistant, entry: SMABluetoothConfigEntry
+) -> None:
     """Preserve inverter registry rows during a guided entry consolidation."""
     owner_entry_id = async_transfer_departing_entry(hass, entry)
     if owner_entry_id is not None:
@@ -543,9 +562,13 @@ async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
     async_refresh_overlap_issues(hass)
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(
+    hass: HomeAssistant, entry: SMABluetoothConfigEntry
+) -> bool:
     """Unload a config entry."""
-    coordinator: SMABluetoothCoordinator = hass.data[DOMAIN][entry.entry_id]
+    if not await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
+        return False
+    coordinator: SMABluetoothCoordinator = entry.runtime_data
     if coordinator.archive_listener_remove is not None:
         coordinator.archive_listener_remove()
         coordinator.archive_listener_remove = None
@@ -559,6 +582,5 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         except asyncio.CancelledError:
             pass
     await coordinator.async_disconnect()
-    if unloaded := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
-        hass.data[DOMAIN].pop(entry.entry_id)
-    return unloaded
+    del entry.runtime_data
+    return True

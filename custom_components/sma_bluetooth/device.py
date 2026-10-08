@@ -18,7 +18,9 @@ def hub_identifier(entry: ConfigEntry) -> tuple[str, str]:
 
 def hub_device_info(entry: ConfigEntry) -> DeviceInfo:
     """Describe the stable Home Assistant SMA-Net2 connection hub."""
-    plant_name = entry.data.get(CONF_PLANT_NAME, entry.title)
+    plant_name = entry.options.get(
+        CONF_PLANT_NAME, entry.data.get(CONF_PLANT_NAME, entry.title)
+    )
     return DeviceInfo(
         identifiers={hub_identifier(entry)},
         name=f"{plant_name} – SMA-Net2",

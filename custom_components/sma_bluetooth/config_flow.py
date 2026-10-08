@@ -2,12 +2,11 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 import re
+from dataclasses import dataclass
 from typing import Any
 
 import voluptuous as vol
-
 from homeassistant import config_entries
 from homeassistant.const import CONF_PASSWORD
 from homeassistant.data_entry_flow import FlowResult
@@ -57,6 +56,7 @@ class SMABluetoothConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle SMA Bluetooth configuration and reconfiguration."""
 
     VERSION = 2
+    MINOR_VERSION = 1
 
     def __init__(self) -> None:
         """Initialize one discovery/configuration flow."""
@@ -64,7 +64,6 @@ class SMABluetoothConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self._discovered: dict[str, str] = {}
         self._pending_data: dict[str, Any] | None = None
         self._pending_probe: _ProbeResult | None = None
-        self._reconfigure = False
 
     async def _async_discover(self) -> bool:
         try:
@@ -78,7 +77,7 @@ class SMABluetoothConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         async def _query(client: SMAClassicClient) -> _ProbeResult:
             inverters = await client.async_query_active()
-            if client.net_id is None or client.effective_mode is None:
+            if not inverters or client.net_id is None or client.effective_mode is None:
                 raise SMAProtocolError("SMA did not report NetID/mode")
             return _ProbeResult(
                 inverters=inverters,
@@ -134,7 +133,9 @@ class SMABluetoothConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return vol.Schema(
             {
                 address_key: address_field,
-                password_key: str,
+                password_key: selector.TextSelector(
+                    selector.TextSelectorConfig(type=selector.TextSelectorType.PASSWORD)
+                ),
                 vol.Required(
                     CONF_CONNECTION_MODE,
                     default=defaults.get(CONF_CONNECTION_MODE, DEFAULT_CONNECTION_MODE),
@@ -202,6 +203,27 @@ class SMABluetoothConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self._pending_probe = probe
         return None
 
+    def _pending_entry_values(self) -> tuple[dict[str, Any], dict[str, Any]]:
+        """Separate connection settings from display/polling settings and cache."""
+        assert self._pending_data is not None
+        data = dict(self._pending_data)
+        options = {
+            key: data.pop(key)
+            for key in (CONF_PLANT_NAME, CONF_SCAN_INTERVAL, CONF_KNOWN_INVERTERS)
+        }
+        return data, options
+
+    def _has_pending_overlap(self, exclude_entry_id: str | None = None) -> bool:
+        """Recheck ownership at confirmation after any concurrent flow finished."""
+        assert self._pending_probe is not None
+        return any(
+            entries_claiming_serials(
+                self.hass,
+                self._pending_probe.inverters,
+                exclude_entry_id=exclude_entry_id,
+            ).values()
+        )
+
     def _confirmation_placeholders(self) -> dict[str, str]:
         assert self._pending_data is not None
         assert self._pending_probe is not None
@@ -255,9 +277,13 @@ class SMABluetoothConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         unique_id = f"{self._pending_probe.effective_mode}:{serial}"
         await self.async_set_unique_id(unique_id)
         self._abort_if_unique_id_configured()
+        if self._has_pending_overlap():
+            return self.async_abort(reason="already_configured")
+        data, options = self._pending_entry_values()
         return self.async_create_entry(
-            title=self._pending_data[CONF_PLANT_NAME],
-            data=self._pending_data,
+            title=options[CONF_PLANT_NAME],
+            data=data,
+            options=options,
         )
 
     async def async_step_reconfigure(
@@ -274,7 +300,6 @@ class SMABluetoothConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     error
                 )
             else:
-                self._reconfigure = True
                 return self.async_show_form(
                     step_id="reconfigure_confirm",
                     data_schema=vol.Schema({}),
@@ -283,7 +308,7 @@ class SMABluetoothConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id="reconfigure",
-            data_schema=self._schema(dict(entry.data), reconfigure=True),
+            data_schema=self._schema({**entry.data, **entry.options}, reconfigure=True),
             errors=errors,
         )
 
@@ -300,13 +325,20 @@ class SMABluetoothConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 description_placeholders=self._confirmation_placeholders(),
             )
         entry = self._get_reconfigure_entry()
-        snapshot = self._pending_data[CONF_KNOWN_INVERTERS]
+        if self._has_pending_overlap(entry.entry_id):
+            return self.async_abort(reason="already_configured")
+        data, options = self._pending_entry_values()
         serial = min(self._pending_probe.inverters)
         unique_id = f"{self._pending_probe.effective_mode}:{serial}"
+        configured = self.hass.config_entries.async_entry_for_domain_unique_id(
+            DOMAIN, unique_id
+        )
+        if configured is not None and configured.entry_id != entry.entry_id:
+            return self.async_abort(reason="already_configured")
         return self.async_update_reload_and_abort(
             entry,
             unique_id=unique_id,
-            title=self._pending_data[CONF_PLANT_NAME],
-            data=self._pending_data,
-            options={**entry.options, CONF_KNOWN_INVERTERS: snapshot},
+            title=options[CONF_PLANT_NAME],
+            data=data,
+            options={**entry.options, **options},
         )

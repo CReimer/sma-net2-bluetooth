@@ -12,7 +12,6 @@ from homeassistant.components.sensor import (
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
     PERCENTAGE,
     EntityCategory,
@@ -27,11 +26,10 @@ from homeassistant.const import (
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DOMAIN
-from .coordinator import SMABluetoothCoordinator
-from .device import hub_device_info, inverter_device_info
+from .coordinator import SMABluetoothConfigEntry, SMABluetoothCoordinator
+from .device import hub_device_info
+from .entity import SMAEntity, SMAInverterEntity
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -151,13 +149,14 @@ DESCRIPTIONS: tuple[SMASensorDescription, ...] = (
     ),
 )
 
+
 async def async_setup_entry(
     hass: HomeAssistant,
-    entry: ConfigEntry,
+    entry: SMABluetoothConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up all discovered inverter sensors."""
-    coordinator: SMABluetoothCoordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator: SMABluetoothCoordinator = entry.runtime_data
     serials = sorted(set(coordinator.data) & coordinator.owned_serials)
     inverter_entities = [
         SMASensor(coordinator, serial, description)
@@ -186,7 +185,7 @@ async def async_setup_entry(
     )
 
 
-class SMASensor(CoordinatorEntity[SMABluetoothCoordinator], SensorEntity):
+class SMASensor(SMAInverterEntity, SensorEntity):
     """A value read from an SMA Bluetooth Classic inverter."""
 
     entity_description: SMASensorDescription
@@ -198,9 +197,8 @@ class SMASensor(CoordinatorEntity[SMABluetoothCoordinator], SensorEntity):
         serial: str,
         description: SMASensorDescription,
     ) -> None:
-        super().__init__(coordinator)
+        super().__init__(coordinator, serial)
         self.entity_description = description
-        self._serial = serial
         self._attr_unique_id = f"sma_bluetooth_{serial}_{description.key}"
         self._attr_suggested_object_id = f"sma_{serial}_{description.suffix}"
 
@@ -210,18 +208,12 @@ class SMASensor(CoordinatorEntity[SMABluetoothCoordinator], SensorEntity):
         return super().available and not self.coordinator.sleeping
 
     @property
-    def device_info(self) -> DeviceInfo:
-        return inverter_device_info(self.coordinator, self._serial)
-
-    @property
     def native_value(self) -> Any:
         inverter = self.coordinator.data.get(self._serial)
         return inverter.values.get(self.entity_description.key) if inverter else None
 
 
-class SMAPlantClockDifferenceSensor(
-    CoordinatorEntity[SMABluetoothCoordinator], SensorEntity
-):
+class SMAPlantClockDifferenceSensor(SMAEntity, SensorEntity):
     """Expose the signed difference between the SMA plant and HA clocks."""
 
     _attr_has_entity_name = True
@@ -232,7 +224,7 @@ class SMAPlantClockDifferenceSensor(
     _attr_suggested_object_id = "sma_pv_plant_clock_difference"
 
     def __init__(
-        self, coordinator: SMABluetoothCoordinator, entry: ConfigEntry
+        self, coordinator: SMABluetoothCoordinator, entry: SMABluetoothConfigEntry
     ) -> None:
         super().__init__(coordinator)
         self._entry = entry
@@ -271,14 +263,14 @@ class SMAPlantClockDifferenceSensor(
         }
 
 
-class SMAHubDiagnosticSensor(CoordinatorEntity[SMABluetoothCoordinator], SensorEntity):
+class SMAHubDiagnosticSensor(SMAEntity, SensorEntity):
     """Base for diagnostics attached to the logical SMA-Net2 hub."""
 
     _attr_has_entity_name = True
     _attr_entity_category = EntityCategory.DIAGNOSTIC
 
     def __init__(
-        self, coordinator: SMABluetoothCoordinator, entry: ConfigEntry
+        self, coordinator: SMABluetoothCoordinator, entry: SMABluetoothConfigEntry
     ) -> None:
         super().__init__(coordinator)
         self._entry = entry
@@ -294,7 +286,7 @@ class SMAConnectionModeSensor(SMAHubDiagnosticSensor):
     _attr_name = "Connection mode"
 
     def __init__(
-        self, coordinator: SMABluetoothCoordinator, entry: ConfigEntry
+        self, coordinator: SMABluetoothCoordinator, entry: SMABluetoothConfigEntry
     ) -> None:
         super().__init__(coordinator, entry)
         self._attr_unique_id = f"sma_bluetooth_{entry.entry_id}_connection_mode"
@@ -314,7 +306,7 @@ class SMANetIDSensor(SMAHubDiagnosticSensor):
     _attr_name = "NetID"
 
     def __init__(
-        self, coordinator: SMABluetoothCoordinator, entry: ConfigEntry
+        self, coordinator: SMABluetoothCoordinator, entry: SMABluetoothConfigEntry
     ) -> None:
         super().__init__(coordinator, entry)
         self._attr_unique_id = f"sma_bluetooth_{entry.entry_id}_net_id"
@@ -336,7 +328,7 @@ class SMACurrentRootSensor(SMAHubDiagnosticSensor):
     _attr_name = "Current root node"
 
     def __init__(
-        self, coordinator: SMABluetoothCoordinator, entry: ConfigEntry
+        self, coordinator: SMABluetoothCoordinator, entry: SMABluetoothConfigEntry
     ) -> None:
         super().__init__(coordinator, entry)
         self._attr_unique_id = f"sma_bluetooth_{entry.entry_id}_root_node"
@@ -346,21 +338,14 @@ class SMACurrentRootSensor(SMAHubDiagnosticSensor):
         return self.coordinator.current_root
 
 
-class SMAInverterDiagnosticSensor(
-    CoordinatorEntity[SMABluetoothCoordinator], SensorEntity
-):
+class SMAInverterDiagnosticSensor(SMAInverterEntity, SensorEntity):
     """Base for diagnostics attached to a stable inverter device."""
 
     _attr_has_entity_name = True
     _attr_entity_category = EntityCategory.DIAGNOSTIC
 
     def __init__(self, coordinator: SMABluetoothCoordinator, serial: str) -> None:
-        super().__init__(coordinator)
-        self._serial = serial
-
-    @property
-    def device_info(self) -> DeviceInfo:
-        return inverter_device_info(self.coordinator, self._serial)
+        super().__init__(coordinator, serial)
 
     def _inverter(self):
         return self.coordinator.data.get(self._serial)

@@ -7,7 +7,8 @@ from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.issue_registry import IssueSeverity
 
@@ -194,7 +195,7 @@ def async_reconcile_ownership(
             and serial in entry_known_serials(entries_by_id[owner_id])
         ]
         if valid_registry_owners:
-            owner_id = sorted(valid_registry_owners)[0]
+            owner_id = min(valid_registry_owners)
         else:
             owner_id = min(serial_claims, key=_entry_sort_key).entry_id
 
@@ -285,13 +286,16 @@ def async_transfer_departing_entry(
     if not isinstance(detected_net_id, int) or detected_net_id <= 1:
         return None
 
-    plant_name = departing.data.get(CONF_PLANT_NAME)
+    plant_name = departing.options.get(
+        CONF_PLANT_NAME, departing.data.get(CONF_PLANT_NAME)
+    )
     password = departing.data.get("password")
     candidates = [
         entry
         for entry in hass.config_entries.async_entries(DOMAIN)
         if entry.options.get(CONF_LAST_DETECTED_NET_ID) == detected_net_id
-        and entry.data.get(CONF_PLANT_NAME) == plant_name
+        and entry.options.get(CONF_PLANT_NAME, entry.data.get(CONF_PLANT_NAME))
+        == plant_name
         and entry.data.get("password") == password
     ]
     if len(candidates) != 1:
