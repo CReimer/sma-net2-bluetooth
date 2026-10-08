@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from collections.abc import Awaitable, Callable
 from datetime import timedelta
-import logging
 from typing import TypeVar
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryError
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import (
@@ -40,12 +41,15 @@ from .ownership import (
 )
 from .protocol import (
     SMAArchivePoint,
+    SMAAuthenticationError,
     SMAClassicClient,
     SMAClockSyncResult,
     SMAConfigurationError,
     SMANetworkModeError,
     SMAProtocolError,
 )
+
+type SMABluetoothConfigEntry = ConfigEntry[SMABluetoothCoordinator]
 
 _LOGGER = logging.getLogger(__name__)
 _T = TypeVar("_T")
@@ -116,13 +120,13 @@ class SMANetIDChangedError(SMAConfigurationError):
 class SMABluetoothCoordinator(DataUpdateCoordinator[dict[str, SMAInverter]]):
     """Coordinate one logical SMA entry through the adapter-wide session gate."""
 
-    def __init__(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
+    def __init__(self, hass: HomeAssistant, entry: SMABluetoothConfigEntry) -> None:
         super().__init__(
             hass,
             logger=_LOGGER,
             name=DOMAIN,
             update_interval=timedelta(
-                seconds=entry.data.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
+                seconds=entry.options.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
             ),
             always_update=True,
             config_entry=entry,
@@ -141,7 +145,7 @@ class SMABluetoothCoordinator(DataUpdateCoordinator[dict[str, SMAInverter]]):
         self.effective_mode: str | None = None
         self.current_root: str | None = None
         self.daytime_interval = timedelta(
-            seconds=entry.data.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
+            seconds=entry.options.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
         )
         self.sleeping = False
         self.adapter_gate = async_get_adapter_gate(hass)
@@ -173,12 +177,16 @@ class SMABluetoothCoordinator(DataUpdateCoordinator[dict[str, SMAInverter]]):
             self.sleeping = True
             self.update_interval = schedule.next_interval
             return self.data or self._known_inverters
+        except SMAAuthenticationError as err:
+            raise ConfigEntryAuthFailed(str(err)) from err
         except SMANetworkModeError as err:
             self.net_id = err.net_id
             async_note_netid_change(
                 self.hass, self.entry, err.net_id, self._known_inverters
             )
-            raise UpdateFailed(str(err)) from err
+            raise ConfigEntryError(str(err)) from err
+        except SMAConfigurationError as err:
+            raise ConfigEntryError(str(err)) from err
         except SMAProtocolError as err:
             raise UpdateFailed(str(err)) from err
 
@@ -245,12 +253,15 @@ class SMABluetoothCoordinator(DataUpdateCoordinator[dict[str, SMAInverter]]):
                 f"to {client.net_id:X}; follow the Home Assistant repair"
             )
 
-        if self.selected_serial and client.effective_mode == EFFECTIVE_MODE_SINGLE:
-            if detected_serials != {self.selected_serial}:
-                raise SMAProtocolError(
-                    "The directly connected SMA inverter no longer matches "
-                    f"configured serial {self.selected_serial}"
-                )
+        if (
+            self.selected_serial
+            and client.effective_mode == EFFECTIVE_MODE_SINGLE
+            and detected_serials != {self.selected_serial}
+        ):
+            raise SMAProtocolError(
+                "The directly connected SMA inverter no longer matches "
+                f"configured serial {self.selected_serial}"
+            )
 
         data_updates: dict[str, object] = {}
         if not isinstance(self.configured_net_id, int):

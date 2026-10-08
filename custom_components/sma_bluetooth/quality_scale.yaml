@@ -1,0 +1,63 @@
+# Local Bronze audit. This custom integration has no official Home Assistant tier.
+# The upstream brands requirement and core review are still outstanding.
+rules:
+  action-setup:
+    status: done
+    comment: Both archive actions are registered idempotently in async_setup, even without a loaded entry; tests/test_services_lifecycle.py.
+  appropriate-polling:
+    status: done
+    comment: coordinator.py uses a configurable interval (default/minimum 60 seconds) and daylight.py defers overnight polling until sunrise.
+  brands:
+    status: todo
+    comment: Local brand/ PNG assets exist for Home Assistant 2026.3+. Official grading still requires an accepted sma_bluetooth entry in home-assistant/brands.
+  common-modules:
+    status: done
+    comment: Shared update logic is in coordinator.py, entity lifecycle and inverter identity in entity.py, and device metadata in device.py.
+  config-flow-test-coverage:
+    status: done
+    comment: tools/run_tests.py enforces 100% config_flow.py line and branch coverage; tests include real flow-manager error recovery, duplicates and reconfiguration.
+  config-flow:
+    status: done
+    comment: User and reconfigure flows have field descriptions and a masked password selector; connection data and options are separated with v2.1 migration.
+  dependency-transparency:
+    status: exempt
+    comment: No additional external Python requirements; the integration uses the Python standard library and Home Assistant dependencies.
+  docs-actions:
+    status: done
+    comment: README describes get_archive and import_archive fields, bounds, responses, side effects and examples.
+  docs-triggers:
+    status: done
+    comment: README documents event types, transition semantics and an automation example; no custom device triggers.
+  docs-conditions:
+    status: exempt
+    comment: No integration-specific conditions; README explains using standard Home Assistant conditions with the entities.
+  docs-high-level-description:
+    status: done
+    comment: README introduces SMA-Net2 legacy solar inverters, local Bluetooth Classic communication and supported features.
+  docs-installation-instructions:
+    status: done
+    comment: README provides prerequisites, HACS/manual installation and step-by-step daylight UI setup.
+  docs-removal-instructions:
+    status: done
+    comment: README covers deleting entries, cleaning references, uninstalling and the effect on history and inverter settings.
+  entity-event-setup:
+    status: done
+    comment: entity.py inherits CoordinatorEntity listener management; entry sunset listener is registered with async_on_unload; archive listener is cleaned on unload.
+  entity-unique-id:
+    status: done
+    comment: Inverter sensor/event IDs contain serial and measurement key; hub diagnostics contain entry ID.
+  has-entity-name:
+    status: done
+    comment: SMAEntity sets has_entity_name for every sensor and event entity.
+  runtime-data:
+    status: done
+    comment: Typed SMABluetoothConfigEntry.runtime_data holds the coordinator for platforms, diagnostics and actions. Only the cross-entry adapter gate uses hass.data.
+  test-before-configure:
+    status: done
+    comment: The flow tests an authenticated selected-device session and rejects missing inverter/NetID/mode facts before confirmation.
+  test-before-setup:
+    status: done
+    comment: First coordinator refresh raises on connection/auth/configuration errors; normal night startup restores cached inverter identities as unavailable.
+  unique-config-entry:
+    status: done
+    comment: Confirmations check unique IDs and recheck serial claims, including overlapping concurrent flows and reconfigure; real flow-manager tests verify no duplicates.

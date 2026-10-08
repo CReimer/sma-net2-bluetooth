@@ -1,9 +1,9 @@
 """Run the offline suite and enforce separate line and branch coverage gates."""
 
-from pathlib import Path
 import json
 import subprocess
 import sys
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 REPORT = ROOT / "coverage-report"
@@ -33,6 +33,15 @@ def main() -> int:
             flush=True,
         )
         failed |= percentage < MINIMUM
+    flow = json.loads((REPORT / "coverage.json").read_text())["files"][
+        "custom_components/sma_bluetooth/config_flow.py"
+    ]["summary"]
+    for label, covered, total in (
+        ("Config flow lines", flow["covered_lines"], flow["num_statements"]),
+        ("Config flow branches", flow["covered_branches"], flow["num_branches"]),
+    ):
+        print(f"{label}: {covered}/{total}; required: 100%", flush=True)
+        failed |= covered != total
     return int(failed)
 
 

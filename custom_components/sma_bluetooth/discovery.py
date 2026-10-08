@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 
 from dbus_fast import BusType, Variant
 from dbus_fast.aio import MessageBus
+
+_LOGGER = logging.getLogger(__name__)
 
 
 class SMADiscoveryError(RuntimeError):
@@ -49,8 +52,8 @@ async def async_discover_sma_devices(timeout: float = 8) -> dict[str, str]:
             for adapter in adapters:
                 try:
                     await adapter.call_stop_discovery()
-                except Exception:
-                    pass
+                except Exception as err:  # noqa: BLE001 - cleanup must stop every adapter
+                    _LOGGER.debug("Could not stop Bluetooth discovery: %s", err)
 
         objects = await manager.call_get_managed_objects()
         found: dict[str, str] = {}

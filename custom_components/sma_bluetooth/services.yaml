@@ -20,7 +20,7 @@ import_archive:
           mode: box
     config_entry_id:
       name: Config entry ID
-      description: Optional; leave empty when only one SMA plant is configured.
+      description: Optional; leave empty to operate on all loaded SMA plant entries.
       required: false
       selector:
         text:
@@ -46,7 +46,7 @@ get_archive:
         datetime:
     config_entry_id:
       name: Config entry ID
-      description: Optional; leave empty when only one SMA plant is configured.
+      description: Optional; leave empty to operate on all loaded SMA plant entries.
       required: false
       selector:
         text:

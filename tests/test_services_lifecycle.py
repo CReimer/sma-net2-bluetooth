@@ -1,11 +1,14 @@
 """Archive service validation, Recorder import and entry lifecycle contracts."""
 
 import asyncio
+import unittest
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace as NS
-import unittest
 from unittest.mock import AsyncMock, Mock, patch
+
+from homeassistant.config_entries import ConfigEntryState
 from homeassistant.exceptions import ServiceValidationError
+
 from custom_components import sma_bluetooth as m
 from custom_components.sma_bluetooth.protocol import SMAArchivePoint, SMAProtocolError
 from tests.test_coordinator_platforms import make_coordinator
@@ -18,7 +21,10 @@ class ServiceTests(unittest.IsolatedAsyncioTestCase):
         self.entry = self.co.entry
         self.hass.data[m.DOMAIN]["entry"] = self.co
         self.hass.config_entries.async_entries = Mock(
-            return_value=[self.entry, NS(entry_id="unloaded")]
+            return_value=[
+                self.entry,
+                NS(entry_id="unloaded", state=ConfigEntryState.NOT_LOADED),
+            ]
         )
         self.callbacks = {}
 
@@ -268,15 +274,16 @@ class LifecycleTests(unittest.IsolatedAsyncioTestCase):
             co.archive_reconcile_task = asyncio.create_task(pending())
             await asyncio.sleep(0)
             self.assertFalse(await m.async_unload_entry(co.hass, co.entry))
-            self.assertTrue(co.archive_reconcile_task.cancelled())
-            self.assertIn("entry", co.hass.data[m.DOMAIN])
+            self.assertFalse(co.archive_reconcile_task.cancelled())
+            self.assertIs(co.entry.runtime_data, co)
             entries.async_unload_platforms.return_value = True
             self.assertTrue(await m.async_unload_entry(co.hass, co.entry))
-            self.assertNotIn("entry", co.hass.data[m.DOMAIN])
+            self.assertTrue(co.archive_reconcile_task.cancelled())
+            self.assertFalse(hasattr(co.entry, "runtime_data"))
             entries.async_forward_entry_setups.side_effect = RuntimeError("platform")
             with self.assertRaises(RuntimeError):
                 await m.async_setup_entry(co.hass, co.entry)
-            self.assertNotIn("entry", co.hass.data[m.DOMAIN])
+            self.assertFalse(hasattr(co.entry, "runtime_data"))
 
     async def test_migration_version_guards_and_removal(self):
         co = make_coordinator()
@@ -290,3 +297,54 @@ class LifecycleTests(unittest.IsolatedAsyncioTestCase):
             ):
                 await m.async_remove_entry(co.hass, co.entry)
                 refresh.assert_called_once_with(co.hass)
+
+    async def test_migration_preserves_new_options_and_connection_identity(self):
+        for version in (1, 2):
+            co = make_coordinator()
+            co.entry.version, co.entry.minor_version = version, 0
+            co.entry.data.update(
+                {
+                    "plant_name": "Old title",
+                    "scan_interval": 120,
+                    "known_inverters": [
+                        {"serial": "1", "value_keys": ["energy_total"]}
+                    ],
+                }
+            )
+            co.entry.options.update(
+                {
+                    "plant_name": "New title",
+                    "scan_interval": 180,
+                    "last_archive_reconcile_date": "2026-10-01",
+                }
+            )
+            self.assertTrue(await m.async_migrate_entry(co.hass, co.entry))
+            self.assertEqual((co.entry.version, co.entry.minor_version), (2, 1))
+            self.assertEqual(co.entry.data["password"], "p")
+            self.assertEqual(co.entry.data["bt_address"], "AA")
+            self.assertNotIn("scan_interval", co.entry.data)
+            self.assertNotIn("plant_name", co.entry.data)
+            self.assertNotIn("known_inverters", co.entry.data)
+            self.assertEqual(co.entry.options["scan_interval"], 180)
+            self.assertEqual(co.entry.options["plant_name"], "New title")
+            self.assertEqual(co.entry.options["known_inverters"][0]["serial"], "1")
+            self.assertEqual(
+                co.entry.options["last_archive_reconcile_date"], "2026-10-01"
+            )
+
+    async def test_failed_initial_refresh_does_not_forward_platforms(self):
+        from homeassistant.exceptions import ConfigEntryNotReady
+
+        co = make_coordinator()
+        del co.entry.runtime_data
+        co.async_config_entry_first_refresh = AsyncMock(
+            side_effect=ConfigEntryNotReady("offline")
+        )
+        co.hass.config_entries.async_forward_entry_setups = AsyncMock()
+        with (
+            patch.object(m, "SMABluetoothCoordinator", return_value=co),
+            self.assertRaises(ConfigEntryNotReady),
+        ):
+            await m.async_setup_entry(co.hass, co.entry)
+        co.hass.config_entries.async_forward_entry_setups.assert_not_awaited()
+        self.assertFalse(hasattr(co.entry, "runtime_data"))
