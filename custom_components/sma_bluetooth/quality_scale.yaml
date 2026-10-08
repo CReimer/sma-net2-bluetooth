@@ -1,4 +1,4 @@
-# Local Bronze audit. This custom integration has no official Home Assistant tier.
+# Local Bronze/Silver audit. This custom integration has no official Home Assistant tier.
 # Custom-integration audit only; no Core submission or official tier is intended.
 # The separate GPL communication library is published on PyPI and tested as an installed dependency.
 rules:
@@ -62,3 +62,33 @@ rules:
   unique-config-entry:
     status: done
     comment: Confirmations check unique IDs and recheck serial claims, including overlapping concurrent flows and reconfigure; real flow-manager tests verify no duplicates.
+  action-exceptions:
+    status: done
+    comment: Archive actions reject invalid inputs with ServiceValidationError and translate protocol/auth/transport failures into HomeAssistantError with the original cause; tests/test_services_lifecycle.py and tests/test_silver_contracts.py.
+  config-entry-unloading:
+    status: done
+    comment: async_unload_entry unloads both platforms before cancelling archive work and removing its listener/runtime; coordinator and sunset cleanup are registered on the entry. Failed platform unload preserves the working runtime; lifecycle tests verify both paths.
+  docs-configuration-parameters:
+    status: done
+    comment: README Configuration parameters describes all five reconfiguration fields, defaults, bounds, password retention and confirmation/reload behavior.
+  docs-installation-parameters:
+    status: done
+    comment: README Setup parameters documents every setup field, required values, defaults, formats, connection modes, daylight and local Bluetooth requirements.
+  entity-unavailable:
+    status: done
+    comment: Coordinator failure makes all dependent entities unavailable; inverter entities also require their serial in the latest response. Live measurement/event entities are unavailable overnight. Tests cover outage, recovery and missing inverter, including diagnostics.
+  integration-owner:
+    status: done
+    comment: CReimer maintains the integration, is named in manifest.codeowners and .github/CODEOWNERS, and is linked with the issue tracker in README.
+  log-when-unavailable:
+    status: done
+    comment: Poll failures raise UpdateFailed and use DataUpdateCoordinator's transition logging. A real coordinator test verifies one failure log across repeated failed polls and one recovery log.
+  parallel-updates:
+    status: done
+    comment: sensor.py and event.py explicitly set PARALLEL_UPDATES=0 because coordinator refreshes and the adapter-wide session gate serialize radio access.
+  reauthentication-flow:
+    status: done
+    comment: ConfigEntryAuthFailed starts the password-only reauth_confirm flow; it probes the existing plant, checks identity/NetID and updates only the password before reloading. Real flow-manager tests cover errors, retry, mismatch, successful reload and preserved identity/options.
+  test-coverage:
+    status: done
+    comment: tools/run_tests.py enforces at least 96% lines and branches separately for every integration module and overall, with 100% config-flow coverage. Coverage-policy tests reject low module/branch results and rounding below the threshold.

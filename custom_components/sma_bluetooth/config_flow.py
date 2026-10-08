@@ -1,9 +1,10 @@
 # SPDX-License-Identifier: Apache-2.0
-"""Config and reconfigure flows for SMA Bluetooth."""
+"""Configuration, reauthentication and reconfiguration for SMA Bluetooth."""
 
 from __future__ import annotations
 
 import re
+from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
 
@@ -310,6 +311,53 @@ class SMABluetoothConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return self.async_show_form(
             step_id="reconfigure",
             data_schema=self._schema({**entry.data, **entry.options}, reconfigure=True),
+            errors=errors,
+        )
+
+    async def async_step_reauth(self, entry_data: Mapping[str, Any]) -> FlowResult:
+        """Request a replacement password for the existing plant."""
+        return await self.async_step_reauth_confirm()
+
+    async def async_step_reauth_confirm(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Verify credentials without changing plant identity or topology."""
+        entry = self._get_reauth_entry()
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            try:
+                probe = await self._async_probe(
+                    {**entry.data, CONF_PASSWORD: user_input[CONF_PASSWORD]}
+                )
+            except SMADaylightError:
+                errors["base"] = "nighttime"
+            except SMANetworkModeError:
+                errors["base"] = "network_requires_netid_2_f"
+            except SMAAuthenticationError:
+                errors["base"] = "invalid_auth"
+            except SMAProtocolError:
+                errors["base"] = "cannot_connect"
+            else:
+                await self.async_set_unique_id(
+                    f"{probe.effective_mode}:{min(probe.inverters)}"
+                )
+                self._abort_if_unique_id_mismatch(reason="wrong_device")
+                if entry.data.get(CONF_NET_ID) not in (None, probe.net_id):
+                    return self.async_abort(reason="topology_changed")
+                return self.async_update_reload_and_abort(
+                    entry, data_updates={CONF_PASSWORD: user_input[CONF_PASSWORD]}
+                )
+        return self.async_show_form(
+            step_id="reauth_confirm",
+            data_schema=vol.Schema(
+                {
+                    vol.Required(CONF_PASSWORD): selector.TextSelector(
+                        selector.TextSelectorConfig(
+                            type=selector.TextSelectorType.PASSWORD
+                        )
+                    )
+                }
+            ),
             errors=errors,
         )
 

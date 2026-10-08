@@ -7,11 +7,27 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 REPORT = ROOT / "coverage-report"
-MINIMUM = 91
+MINIMUM = 96
 
 
 def run(*args: str) -> None:
     subprocess.run([sys.executable, "-m", "coverage", *args], cwd=ROOT, check=True)
+
+
+def check_summary(label: str, summary: dict, *, minimum: int = MINIMUM) -> bool:
+    """Enforce line and branch floors independently, without rounded comparisons."""
+    passed = True
+    for metric, covered, total in (
+        ("lines", summary["covered_lines"], summary["num_statements"]),
+        ("branches", summary["covered_branches"], summary["num_branches"]),
+    ):
+        percentage = 100 * covered / total if total else 100
+        print(
+            f"{label} {metric}: {percentage:.2f}% ({covered}/{total}); required: {minimum}%",
+            flush=True,
+        )
+        passed &= covered * 100 >= minimum * total
+    return passed
 
 
 def main() -> int:
@@ -21,28 +37,21 @@ def main() -> int:
     run("json", "-o", str(REPORT / "coverage.json"))
     run("xml", "-o", str(REPORT / "coverage.xml"))
     run("html", "-d", str(REPORT / "html"))
-    totals = json.loads((REPORT / "coverage.json").read_text())["totals"]
-    failed = False
-    for label, covered, total in (
-        ("Lines", totals["covered_lines"], totals["num_statements"]),
-        ("Branches", totals["covered_branches"], totals["num_branches"]),
-    ):
-        percentage = 100 * covered / total if total else 100
-        print(
-            f"{label}: {percentage:.2f}% ({covered}/{total}); required: {MINIMUM}%",
-            flush=True,
+    report = json.loads((REPORT / "coverage.json").read_text())
+    passed = check_summary("Overall", report["totals"])
+    for module, result in report["files"].items():
+        passed = check_summary(module, result["summary"]) and passed
+    passed = (
+        check_summary(
+            "Config flow",
+            report["files"]["custom_components/sma_bluetooth/config_flow.py"][
+                "summary"
+            ],
+            minimum=100,
         )
-        failed |= percentage < MINIMUM
-    flow = json.loads((REPORT / "coverage.json").read_text())["files"][
-        "custom_components/sma_bluetooth/config_flow.py"
-    ]["summary"]
-    for label, covered, total in (
-        ("Config flow lines", flow["covered_lines"], flow["num_statements"]),
-        ("Config flow branches", flow["covered_branches"], flow["num_branches"]),
-    ):
-        print(f"{label}: {covered}/{total}; required: 100%", flush=True)
-        failed |= covered != total
-    return int(failed)
+        and passed
+    )
+    return int(not passed)
 
 
 if __name__ == "__main__":
