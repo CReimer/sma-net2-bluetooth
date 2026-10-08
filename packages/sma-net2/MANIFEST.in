@@ -1,4 +1,6 @@
 include README.md
+include API.md
+include QUALITY.md
 include RELEASING.md
 include LICENSE
 recursive-include src *.py py.typed

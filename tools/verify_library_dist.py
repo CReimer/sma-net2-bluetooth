@@ -12,6 +12,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 PACKAGE = ROOT / "packages" / "sma-net2"
+sys.path.insert(0, str(ROOT))
+from tools.run_tests import check_summary
 
 
 def main() -> None:
@@ -38,7 +40,14 @@ def main() -> None:
             )
             python = str(venv / "bin" / "python")
             subprocess.run(
-                [python, "-m", "pip", "install", str(artifact.resolve())],
+                [
+                    python,
+                    "-m",
+                    "pip",
+                    "install",
+                    str(artifact.resolve()),
+                    "coverage==7.15.3",
+                ],
                 check=True,
                 env=env,
             )
@@ -65,6 +74,10 @@ def main() -> None:
                     python,
                     "-I",
                     "-m",
+                    "coverage",
+                    "run",
+                    "--rcfile=" + str(PACKAGE / "pyproject.toml"),
+                    "-m",
                     "unittest",
                     "discover",
                     "-s",
@@ -75,6 +88,28 @@ def main() -> None:
                 cwd=scratch,
                 env=env,
             )
+            report_path = scratch / "coverage.json"
+            subprocess.run(
+                [
+                    python,
+                    "-I",
+                    "-m",
+                    "coverage",
+                    "json",
+                    "--rcfile=" + str(PACKAGE / "pyproject.toml"),
+                    "-o",
+                    str(report_path),
+                ],
+                check=True,
+                cwd=scratch,
+                env=env,
+            )
+            report = json.loads(report_path.read_text())
+            passed = check_summary(artifact.name, report["totals"])
+            for module, result in report["files"].items():
+                passed = check_summary(module, result["summary"]) and passed
+            if not passed:
+                raise SystemExit("Installed artifact failed the library coverage gates")
             print(f"Verified {artifact.name}: {installed}", flush=True)
 
 

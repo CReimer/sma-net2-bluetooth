@@ -24,7 +24,7 @@ from homeassistant.const import (
     UnitOfTemperature,
     UnitOfTime,
 )
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
@@ -43,7 +43,7 @@ class SMASensorDescription(SensorEntityDescription):
 DESCRIPTIONS: tuple[SMASensorDescription, ...] = (
     SMASensorDescription(
         key="ac_power_total",
-        name="Power",
+        translation_key="ac_power_total",
         suffix="power",
         device_class=SensorDeviceClass.POWER,
         native_unit_of_measurement=UnitOfPower.WATT,
@@ -51,7 +51,7 @@ DESCRIPTIONS: tuple[SMASensorDescription, ...] = (
     ),
     SMASensorDescription(
         key="energy_today",
-        name="Energy today",
+        translation_key="energy_today",
         suffix="energy_today",
         device_class=SensorDeviceClass.ENERGY,
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
@@ -59,7 +59,7 @@ DESCRIPTIONS: tuple[SMASensorDescription, ...] = (
     ),
     SMASensorDescription(
         key="energy_total",
-        name="Energy total",
+        translation_key="energy_total",
         suffix="energy_total",
         device_class=SensorDeviceClass.ENERGY,
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
@@ -67,26 +67,28 @@ DESCRIPTIONS: tuple[SMASensorDescription, ...] = (
     ),
     SMASensorDescription(
         key="temperature",
-        name="Temperature",
+        translation_key="temperature",
         suffix="temperature",
         device_class=SensorDeviceClass.TEMPERATURE,
         native_unit_of_measurement=UnitOfTemperature.CELSIUS,
         state_class=SensorStateClass.MEASUREMENT,
     ),
-    SMASensorDescription(key="status", name="Status", suffix="status"),
+    SMASensorDescription(key="status", translation_key="status", suffix="status"),
     SMASensorDescription(
-        key="relay_status", name="Relay status", suffix="relay_status"
+        key="relay_status", translation_key="relay_status", suffix="relay_status"
     ),
     SMASensorDescription(
         key="bt_signal",
-        name="Bluetooth signal",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        entity_registry_enabled_default=False,
+        translation_key="bt_signal",
         suffix="bluetooth_signal",
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
     ),
     SMASensorDescription(
         key="frequency",
-        name="Grid frequency",
+        translation_key="frequency",
         suffix="frequency",
         device_class=SensorDeviceClass.FREQUENCY,
         native_unit_of_measurement=UnitOfFrequency.HERTZ,
@@ -94,7 +96,7 @@ DESCRIPTIONS: tuple[SMASensorDescription, ...] = (
     ),
     SMASensorDescription(
         key="operation_time",
-        name="Operating time",
+        translation_key="operation_time",
         suffix="operating_time",
         device_class=SensorDeviceClass.DURATION,
         native_unit_of_measurement=UnitOfTime.HOURS,
@@ -102,7 +104,7 @@ DESCRIPTIONS: tuple[SMASensorDescription, ...] = (
     ),
     SMASensorDescription(
         key="feed_in_time",
-        name="Feed-in time",
+        translation_key="feed_in_time",
         suffix="feed_in_time",
         device_class=SensorDeviceClass.DURATION,
         native_unit_of_measurement=UnitOfTime.HOURS,
@@ -110,7 +112,7 @@ DESCRIPTIONS: tuple[SMASensorDescription, ...] = (
     ),
     SMASensorDescription(
         key="dc_power_total",
-        name="DC power total",
+        translation_key="dc_power_total",
         suffix="dc_power_total",
         device_class=SensorDeviceClass.POWER,
         native_unit_of_measurement=UnitOfPower.WATT,
@@ -119,7 +121,7 @@ DESCRIPTIONS: tuple[SMASensorDescription, ...] = (
     *tuple(
         SMASensorDescription(
             key=f"dc_{kind}_{channel}",
-            name=f"DC {kind} MPPT {channel}",
+            translation_key=f"dc_{kind}_{channel}",
             suffix=f"dc_{kind}_{channel}",
             device_class=device_class,
             native_unit_of_measurement=unit,
@@ -135,7 +137,7 @@ DESCRIPTIONS: tuple[SMASensorDescription, ...] = (
     *tuple(
         SMASensorDescription(
             key=f"ac_{kind}_{phase}",
-            name=f"AC {kind} phase {phase}",
+            translation_key=f"ac_{kind}_{phase}",
             suffix=f"ac_{kind}_{phase}",
             device_class=device_class,
             native_unit_of_measurement=unit,
@@ -162,32 +164,41 @@ async def async_setup_entry(
 ) -> None:
     """Set up all discovered inverter sensors."""
     coordinator: SMABluetoothCoordinator = entry.runtime_data
-    serials = sorted(set(coordinator.data) & coordinator.owned_serials)
-    inverter_entities = [
-        SMASensor(coordinator, serial, description)
-        for serial in serials
-        for inverter in (coordinator.data[serial],)
-        for description in DESCRIPTIONS
-        if description.key in inverter.values
-    ]
     async_add_entities(
         [
             SMAConnectionModeSensor(coordinator, entry),
             SMANetIDSensor(coordinator, entry),
             SMACurrentRootSensor(coordinator, entry),
             SMAPlantClockDifferenceSensor(coordinator, entry),
-            *inverter_entities,
-            *(SMAInverterRoleSensor(coordinator, serial) for serial in serials),
-            *(
-                SMAInverterRecordTimestampSensor(coordinator, serial)
-                for serial in serials
-            ),
-            *(
-                SMAInverterClockDifferenceSensor(coordinator, serial)
-                for serial in serials
-            ),
         ]
     )
+    known: set[tuple[str, str]] = set()
+
+    @callback
+    def add_new_entities() -> None:
+        entities: list[SensorEntity] = []
+        for serial in sorted(set(coordinator.data) & coordinator.owned_serials):
+            for description in DESCRIPTIONS:
+                identity = (serial, description.key)
+                if (
+                    description.key in coordinator.data[serial].values
+                    and identity not in known
+                ):
+                    known.add(identity)
+                    entities.append(SMASensor(coordinator, serial, description))
+            if (serial, "diagnostics") not in known:
+                known.add((serial, "diagnostics"))
+                entities.extend(
+                    [
+                        SMAInverterRoleSensor(coordinator, serial),
+                        SMAInverterRecordTimestampSensor(coordinator, serial),
+                        SMAInverterClockDifferenceSensor(coordinator, serial),
+                    ]
+                )
+        async_add_entities(entities)
+
+    add_new_entities()
+    entry.async_on_unload(coordinator.async_add_listener(add_new_entities))
 
 
 class SMASensor(SMAInverterEntity, SensorEntity):
@@ -222,8 +233,9 @@ class SMAPlantClockDifferenceSensor(SMAEntity, SensorEntity):
     """Expose the signed difference between the SMA plant and HA clocks."""
 
     _attr_has_entity_name = True
-    _attr_name = "Plant clock difference at check"
+    _attr_translation_key = "plant_clock_difference"
     _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_entity_registry_enabled_default = False
     _attr_native_unit_of_measurement = UnitOfTime.SECONDS
     _attr_state_class = SensorStateClass.MEASUREMENT
     _attr_suggested_object_id = "sma_pv_plant_clock_difference"
@@ -273,6 +285,7 @@ class SMAHubDiagnosticSensor(SMAEntity, SensorEntity):
 
     _attr_has_entity_name = True
     _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_entity_registry_enabled_default = False
 
     def __init__(
         self, coordinator: SMABluetoothCoordinator, entry: SMABluetoothConfigEntry
@@ -288,7 +301,7 @@ class SMAHubDiagnosticSensor(SMAEntity, SensorEntity):
 class SMAConnectionModeSensor(SMAHubDiagnosticSensor):
     """Expose the effective and configured connection modes."""
 
-    _attr_name = "Connection mode"
+    _attr_translation_key = "connection_mode"
 
     def __init__(
         self, coordinator: SMABluetoothCoordinator, entry: SMABluetoothConfigEntry
@@ -308,7 +321,7 @@ class SMAConnectionModeSensor(SMAHubDiagnosticSensor):
 class SMANetIDSensor(SMAHubDiagnosticSensor):
     """Expose the NetID detected in the most recent SMA session."""
 
-    _attr_name = "NetID"
+    _attr_translation_key = "net_id"
 
     def __init__(
         self, coordinator: SMABluetoothCoordinator, entry: SMABluetoothConfigEntry
@@ -330,7 +343,7 @@ class SMANetIDSensor(SMAHubDiagnosticSensor):
 class SMACurrentRootSensor(SMAHubDiagnosticSensor):
     """Expose the current root serial or unidentified root Bluetooth address."""
 
-    _attr_name = "Current root node"
+    _attr_translation_key = "root_node"
 
     def __init__(
         self, coordinator: SMABluetoothCoordinator, entry: SMABluetoothConfigEntry
@@ -348,6 +361,7 @@ class SMAInverterDiagnosticSensor(SMAInverterEntity, SensorEntity):
 
     _attr_has_entity_name = True
     _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_entity_registry_enabled_default = False
 
     def __init__(self, coordinator: SMABluetoothCoordinator, serial: str) -> None:
         super().__init__(coordinator, serial)
@@ -359,7 +373,7 @@ class SMAInverterDiagnosticSensor(SMAInverterEntity, SensorEntity):
 class SMAInverterRoleSensor(SMAInverterDiagnosticSensor):
     """Expose direct/root/participant without affecting via-device hierarchy."""
 
-    _attr_name = "Network role"
+    _attr_translation_key = "network_role"
 
     def __init__(self, coordinator: SMABluetoothCoordinator, serial: str) -> None:
         super().__init__(coordinator, serial)
@@ -374,7 +388,7 @@ class SMAInverterRoleSensor(SMAInverterDiagnosticSensor):
 class SMAInverterRecordTimestampSensor(SMAInverterDiagnosticSensor):
     """Expose the last SMA record timestamp in transfer order."""
 
-    _attr_name = "Record timestamp"
+    _attr_translation_key = "record_timestamp"
     _attr_device_class = SensorDeviceClass.TIMESTAMP
 
     def __init__(self, coordinator: SMABluetoothCoordinator, serial: str) -> None:
@@ -403,7 +417,7 @@ class SMAInverterRecordTimestampSensor(SMAInverterDiagnosticSensor):
 class SMAInverterClockDifferenceSensor(SMAInverterDiagnosticSensor):
     """Expose raw SMA record time minus its matching receive time."""
 
-    _attr_name = "Record clock difference"
+    _attr_translation_key = "record_clock_difference"
     _attr_native_unit_of_measurement = UnitOfTime.SECONDS
     _attr_state_class = SensorStateClass.MEASUREMENT
 

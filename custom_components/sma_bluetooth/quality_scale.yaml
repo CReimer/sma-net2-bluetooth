@@ -1,4 +1,4 @@
-# Local Bronze/Silver audit. This custom integration has no official Home Assistant tier.
+# Local Bronze/Silver/Gold audit. This custom integration has no official Home Assistant tier.
 # Custom-integration audit only; no Core submission or official tier is intended.
 # The separate GPL communication library is published on PyPI and tested as an installed dependency.
 rules:
@@ -22,7 +22,7 @@ rules:
     comment: User and reconfigure flows have field descriptions and a masked password selector; connection data and options are separated with v2.1 migration.
   dependency-transparency:
     status: done
-    comment: Device communication uses the separate open-source GPL-3.0-or-later sma-net2==0.1.0 package published on PyPI with wheel, sdist, public source and issue tracker. No protocol/discovery implementation remains in the integration. CI installs the published pinned release; both published artifacts were tested in isolated environments without Home Assistant.
+    comment: Device communication uses the separate open-source GPL-3.0-or-later sma-net2==0.1.1 package published on PyPI with wheel, sdist, public source and issue tracker. No protocol/discovery implementation remains in the integration. CI installs the published pinned release; both published artifacts were tested in isolated environments without Home Assistant.
   docs-actions:
     status: done
     comment: README describes get_archive and import_archive fields, bounds, responses, side effects and examples.
@@ -92,3 +92,66 @@ rules:
   test-coverage:
     status: done
     comment: tools/run_tests.py enforces at least 96% lines and branches separately for every integration module and overall, with 100% config-flow coverage. Coverage-policy tests reject low module/branch results and rounding below the threshold.
+  devices:
+    status: done
+    comment: Serial-based inverter devices include manufacturer, model, software and serial, below a stable entry hub; device.py and registry tests.
+  diagnostics:
+    status: done
+    comment: diagnostics.py provides downloadable session/recovery metadata with passwords, plant names, serial keys and Bluetooth addresses redacted; tests/test_gold_contracts.py.
+  discovery-update-info:
+    status: exempt
+    comment: SMA-Net2 has fixed Bluetooth Classic hardware addresses and no IP endpoint or BLE discovery advertisements. Changing the selected physical endpoint is a verified reconfiguration, not an automatic address update.
+  discovery:
+    status: exempt
+    comment: SMA-Net2 is BR/EDR inquiry plus RFCOMM, not BLE advertising or an IP discovery protocol supported by HA. Its BluetoothServiceInfoBleak discovery cannot discover these devices. The user flow retains an active local BlueZ Classic scan with manual-address fallback. See README Discovery limitations; no BLE matcher is fabricated.
+  docs-data-update:
+    status: done
+    comment: README Data updates explains daylight polling, minimum/default interval, sunrise scheduling, serialized sessions, timestamp fidelity and daily archive/clock reconciliation.
+  docs-examples:
+    status: done
+    comment: README includes tested-format archive actions, fault notification automation and a power dashboard card; entity IDs are explicit examples to replace.
+  docs-known-limitations:
+    status: done
+    comment: README Requirements, Discovery limitations and Known limitations cover Classic-only local radio, night-time sleep, model variance, polling events and archive/clock side effects.
+  docs-supported-devices:
+    status: done
+    comment: README identifies the verified SB 3000HF-30 network and labels other legacy models unverified; modern WebConnect/BLE proxies are distinguished.
+  docs-supported-functions:
+    status: done
+    comment: README Supported functions lists every sensor group, units, event behavior, diagnostics, actions and default-disabled entities.
+  docs-troubleshooting:
+    status: done
+    comment: README Troubleshooting gives symptom-specific steps for discovery, credentials, topology, availability, adapter recovery and archive failures, plus private bug-report guidance.
+  docs-use-cases:
+    status: done
+    comment: README Use cases covers production monitoring, Energy dashboard, fault notification and archive restoration with concrete setup steps.
+  dynamic-devices:
+    status: done
+    comment: Sensor/event listeners add newly owned inverters and newly exposed measurement keys on coordinator updates, deduplicate unique IDs and unsubscribe on entry unload; tests/test_gold_contracts.py.
+  entity-category:
+    status: done
+    comment: Hub/inverter metadata and percent Bluetooth signal are diagnostic entities; production measurements and events remain primary.
+  entity-device-class:
+    status: done
+    comment: Physical sensors use power, energy, current, voltage, temperature, frequency, duration and timestamp classes. Percent Bluetooth signal and signed clock offsets intentionally do not misrepresent dBm or nonnegative duration.
+  entity-disabled-by-default:
+    status: done
+    comment: Noisy record timestamps/offsets, topology diagnostics and Bluetooth signal are disabled by default. Existing user registry settings are preserved; README documents enabling them.
+  entity-translations:
+    status: done
+    comment: Every sensor/event uses a translation key with English and German names; event type attribute labels are translated. Tests exercise actual HA translation loading and key/icon/device-class completeness.
+  exception-translations:
+    status: done
+    comment: Action validation/runtime and coordinator setup/update errors carry stable domain/key metadata with en/de exceptions messages and original causes. Flow/Repairs errors were already translated.
+  icon-translations:
+    status: done
+    comment: icons.json supplies icons for entities without a suitable built-in device class. Physical quantities retain HA device-class icons; hassfest validates the file.
+  reconfiguration-flow:
+    status: done
+    comment: Existing verified reconfigure and confirmation flow supports connection parameters/options without changing serial identity; real FlowManager regression tests.
+  repair-issues:
+    status: done
+    comment: Translated guided topology/serial-overlap repairs and persistent adapter-recovery issues explain user action; issues clear only when verified. Tests cover issue creation, persistence and resolution.
+  stale-devices:
+    status: done
+    comment: async_remove_config_entry_device allows explicit deletion of an inverter absent from a successful awake poll, rejects live devices/hub/outages/sleep. Temporary radio absence never automatically deletes registry/history; tests/test_gold_contracts.py.

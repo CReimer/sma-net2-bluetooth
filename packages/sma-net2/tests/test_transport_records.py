@@ -234,6 +234,8 @@ class TransportTests(unittest.IsolatedAsyncioTestCase):
             with self.assertRaisesRegex(p.SMAProtocolError, "signature"):
                 await self.receive([self.frame(payload)])
         payload = bytearray(self.client._l2_payload(9, 0xA0, 0, 1, 1, b"payload"))
-        payload[-2] ^= 1
+        # Corrupt the final ASCII body byte, not a CRC byte that could become
+        # an escape marker and consume the frame terminator.
+        payload[-4] ^= 1
         with self.assertRaisesRegex(p.SMAProtocolError, "checksum"):
             await self.receive([self.frame(payload)])

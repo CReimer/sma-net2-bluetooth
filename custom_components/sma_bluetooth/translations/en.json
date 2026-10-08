@@ -178,5 +178,167 @@
       "title": "SMA Bluetooth recovery failed",
       "description": "SMA communication through **{address}** remained unavailable after the integration power-cycled the local Bluetooth adapter. Check the adapter and inverter power, then reload the SMA integration. The integration will keep retrying automatically."
     }
+  },
+  "entity": {
+    "sensor": {
+      "ac_power_total": {
+        "name": "Power"
+      },
+      "energy_today": {
+        "name": "Energy today"
+      },
+      "energy_total": {
+        "name": "Energy total"
+      },
+      "temperature": {
+        "name": "Temperature"
+      },
+      "status": {
+        "name": "Status"
+      },
+      "relay_status": {
+        "name": "Relay status"
+      },
+      "bt_signal": {
+        "name": "Bluetooth signal"
+      },
+      "frequency": {
+        "name": "Grid frequency"
+      },
+      "operation_time": {
+        "name": "Operating time"
+      },
+      "feed_in_time": {
+        "name": "Feed-in time"
+      },
+      "dc_power_total": {
+        "name": "DC power total"
+      },
+      "plant_clock_difference": {
+        "name": "Plant clock difference at check"
+      },
+      "connection_mode": {
+        "name": "Connection mode"
+      },
+      "net_id": {
+        "name": "NetID"
+      },
+      "root_node": {
+        "name": "Current root node"
+      },
+      "network_role": {
+        "name": "Network role"
+      },
+      "record_timestamp": {
+        "name": "Record timestamp"
+      },
+      "record_clock_difference": {
+        "name": "Record clock difference"
+      },
+      "dc_power_1": {
+        "name": "DC power MPPT 1"
+      },
+      "dc_voltage_1": {
+        "name": "DC voltage MPPT 1"
+      },
+      "dc_current_1": {
+        "name": "DC current MPPT 1"
+      },
+      "dc_power_2": {
+        "name": "DC power MPPT 2"
+      },
+      "dc_voltage_2": {
+        "name": "DC voltage MPPT 2"
+      },
+      "dc_current_2": {
+        "name": "DC current MPPT 2"
+      },
+      "ac_power_1": {
+        "name": "AC power phase 1"
+      },
+      "ac_voltage_1": {
+        "name": "AC voltage phase 1"
+      },
+      "ac_current_1": {
+        "name": "AC current phase 1"
+      },
+      "ac_power_2": {
+        "name": "AC power phase 2"
+      },
+      "ac_voltage_2": {
+        "name": "AC voltage phase 2"
+      },
+      "ac_current_2": {
+        "name": "AC current phase 2"
+      },
+      "ac_power_3": {
+        "name": "AC power phase 3"
+      },
+      "ac_voltage_3": {
+        "name": "AC voltage phase 3"
+      },
+      "ac_current_3": {
+        "name": "AC current phase 3"
+      }
+    },
+    "event": {
+      "events": {
+        "name": "Events",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "warning": "Warning",
+              "fault": "Fault",
+              "grid_connected": "Grid connected",
+              "grid_disconnected": "Grid disconnected"
+            }
+          }
+        }
+      }
+    }
+  },
+  "exceptions": {
+    "no_loaded_entry": {
+      "message": "No loaded SMA Bluetooth entry found"
+    },
+    "start_timezone": {
+      "message": "Archive start must include a timezone"
+    },
+    "end_timezone": {
+      "message": "Archive end must include a timezone"
+    },
+    "end_before_start": {
+      "message": "Archive end must be after start"
+    },
+    "archive_alignment": {
+      "message": "Archive start and end must be aligned to five-minute boundaries"
+    },
+    "archive_range": {
+      "message": "Archive range cannot exceed 62 days"
+    },
+    "archive_import": {
+      "message": "Could not import SMA archive: See the debug log for details."
+    },
+    "archive_read": {
+      "message": "Could not read SMA archive: See the debug log for details."
+    },
+    "archive_timestamps": {
+      "message": "SMA inverters returned different archive timestamps"
+    },
+    "archive_entities": {
+      "message": "Not every SMA total-energy entity was imported"
+    },
+    "invalid_auth": {
+      "message": "The SMA user password is invalid. Reauthenticate the entry."
+    },
+    "invalid_topology": {
+      "message": "The SMA topology has changed or is incompatible. Check Repairs and reconfigure the entry."
+    },
+    "poll_failed": {
+      "message": "Could not update the SMA inverters. Check Bluetooth connectivity and the debug log."
+    },
+    "night_pause": {
+      "message": "SMA polling is paused until sunrise after an unsuccessful update."
+    }
   }
 }

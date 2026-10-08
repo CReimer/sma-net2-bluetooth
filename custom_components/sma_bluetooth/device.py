@@ -46,7 +46,9 @@ def inverter_device_info(
     coordinator: SMABluetoothCoordinator, serial: str
 ) -> DeviceInfo:
     """Describe one inverter below the stable connection hub."""
-    inverter = coordinator.data[serial]
+    inverter = coordinator.data.get(serial)
+    if inverter is None:
+        return DeviceInfo(identifiers={(DOMAIN, serial)}, serial_number=serial)
     hub = None
     if hasattr(coordinator, "hass"):
         hub = dr.async_get(coordinator.hass).async_get_device_by_identifier(

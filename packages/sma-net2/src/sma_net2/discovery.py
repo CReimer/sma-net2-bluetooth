@@ -37,17 +37,17 @@ async def async_discover_sma_devices(timeout: float = 8) -> dict[str, str]:
             raise SMADiscoveryError("No local BlueZ adapter found")
 
         adapters = []
-        for path in adapter_paths:
-            intro = await bus.introspect("org.bluez", path)
-            obj = bus.get_proxy_object("org.bluez", path, intro)
-            adapter = obj.get_interface("org.bluez.Adapter1")
-            await adapter.call_set_discovery_filter(
-                {"Transport": Variant("s", "bredr")}
-            )
-            await adapter.call_start_discovery()
-            adapters.append(adapter)
-
         try:
+            for path in adapter_paths:
+                intro = await bus.introspect("org.bluez", path)
+                obj = bus.get_proxy_object("org.bluez", path, intro)
+                adapter = obj.get_interface("org.bluez.Adapter1")
+                await adapter.call_set_discovery_filter(
+                    {"Transport": Variant("s", "bredr")}
+                )
+                await adapter.call_start_discovery()
+                adapters.append(adapter)
+
             await asyncio.sleep(timeout)
         finally:
             for adapter in adapters:

@@ -178,5 +178,167 @@
       "title": "SMA-Bluetooth-Wiederherstellung fehlgeschlagen",
       "description": "Die SMA-Kommunikation über **{address}** blieb auch nach dem automatischen Aus- und Einschalten des lokalen Bluetooth-Adapters nicht verfügbar. Prüfe Adapter und Stromversorgung der Wechselrichter und lade anschließend die SMA-Integration neu. Die Integration versucht die Verbindung weiterhin automatisch."
     }
+  },
+  "entity": {
+    "sensor": {
+      "ac_power_total": {
+        "name": "Leistung"
+      },
+      "energy_today": {
+        "name": "Energie heute"
+      },
+      "energy_total": {
+        "name": "Gesamtenergie"
+      },
+      "temperature": {
+        "name": "Temperatur"
+      },
+      "status": {
+        "name": "Status"
+      },
+      "relay_status": {
+        "name": "Relaisstatus"
+      },
+      "bt_signal": {
+        "name": "Bluetooth-Signal"
+      },
+      "frequency": {
+        "name": "Netzfrequenz"
+      },
+      "operation_time": {
+        "name": "Betriebszeit"
+      },
+      "feed_in_time": {
+        "name": "Einspeisezeit"
+      },
+      "dc_power_total": {
+        "name": "DC-Gesamtleistung"
+      },
+      "plant_clock_difference": {
+        "name": "Anlagenzeitabweichung bei Prüfung"
+      },
+      "connection_mode": {
+        "name": "Verbindungsmodus"
+      },
+      "net_id": {
+        "name": "NetID"
+      },
+      "root_node": {
+        "name": "Aktueller Wurzelknoten"
+      },
+      "network_role": {
+        "name": "Netzwerkrolle"
+      },
+      "record_timestamp": {
+        "name": "Datensatzzeitpunkt"
+      },
+      "record_clock_difference": {
+        "name": "Zeitabweichung des Datensatzes"
+      },
+      "dc_power_1": {
+        "name": "DC-Leistung MPPT 1"
+      },
+      "dc_voltage_1": {
+        "name": "DC-Spannung MPPT 1"
+      },
+      "dc_current_1": {
+        "name": "DC-Strom MPPT 1"
+      },
+      "dc_power_2": {
+        "name": "DC-Leistung MPPT 2"
+      },
+      "dc_voltage_2": {
+        "name": "DC-Spannung MPPT 2"
+      },
+      "dc_current_2": {
+        "name": "DC-Strom MPPT 2"
+      },
+      "ac_power_1": {
+        "name": "AC-Leistung Phase 1"
+      },
+      "ac_voltage_1": {
+        "name": "AC-Spannung Phase 1"
+      },
+      "ac_current_1": {
+        "name": "AC-Strom Phase 1"
+      },
+      "ac_power_2": {
+        "name": "AC-Leistung Phase 2"
+      },
+      "ac_voltage_2": {
+        "name": "AC-Spannung Phase 2"
+      },
+      "ac_current_2": {
+        "name": "AC-Strom Phase 2"
+      },
+      "ac_power_3": {
+        "name": "AC-Leistung Phase 3"
+      },
+      "ac_voltage_3": {
+        "name": "AC-Spannung Phase 3"
+      },
+      "ac_current_3": {
+        "name": "AC-Strom Phase 3"
+      }
+    },
+    "event": {
+      "events": {
+        "name": "Ereignisse",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "warning": "Warnung",
+              "fault": "Störung",
+              "grid_connected": "Netz verbunden",
+              "grid_disconnected": "Netz getrennt"
+            }
+          }
+        }
+      }
+    }
+  },
+  "exceptions": {
+    "no_loaded_entry": {
+      "message": "Kein geladener SMA-Bluetooth-Eintrag gefunden."
+    },
+    "start_timezone": {
+      "message": "Der Archivbeginn muss eine Zeitzone enthalten."
+    },
+    "end_timezone": {
+      "message": "Das Archivende muss eine Zeitzone enthalten."
+    },
+    "end_before_start": {
+      "message": "Das Archivende muss nach dem Beginn liegen."
+    },
+    "archive_alignment": {
+      "message": "Archivbeginn und -ende müssen auf Fünf-Minuten-Grenzen liegen."
+    },
+    "archive_range": {
+      "message": "Der Archivzeitraum darf 62 Tage nicht überschreiten."
+    },
+    "archive_import": {
+      "message": "Das SMA-Archiv konnte nicht importiert werden. Details stehen im Debugprotokoll."
+    },
+    "archive_read": {
+      "message": "Das SMA-Archiv konnte nicht gelesen werden. Details stehen im Debugprotokoll."
+    },
+    "archive_timestamps": {
+      "message": "Die Wechselrichter lieferten unterschiedliche Archivzeitpunkte."
+    },
+    "archive_entities": {
+      "message": "Nicht alle Gesamtenergie-Entitäten konnten importiert werden."
+    },
+    "invalid_auth": {
+      "message": "Das SMA-Benutzerpasswort ist ungültig. Bitte erneut authentifizieren."
+    },
+    "invalid_topology": {
+      "message": "Die SMA-Topologie wurde geändert oder ist inkompatibel. Repairs prüfen und Eintrag neu konfigurieren."
+    },
+    "poll_failed": {
+      "message": "Die SMA-Wechselrichter konnten nicht aktualisiert werden. Bluetooth-Verbindung und Debugprotokoll prüfen."
+    },
+    "night_pause": {
+      "message": "SMA-Abfragen pausieren nach einem fehlgeschlagenen Update bis Sonnenaufgang."
+    }
   }
 }
