@@ -22,6 +22,10 @@ EVENT_TYPES = [
 ]
 
 
+# Coordinator refreshes and the adapter-wide gate serialize device access.
+PARALLEL_UPDATES = 0
+
+
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: SMABluetoothConfigEntry,

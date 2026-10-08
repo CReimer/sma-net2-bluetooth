@@ -333,14 +333,19 @@ async def async_setup(hass: HomeAssistant, config: dict[str, Any]) -> bool:
 
         for entry in entries:
             coordinator: SMABluetoothCoordinator = entry.runtime_data
-            imported.update(
-                await _async_import_periods(
-                    hass,
-                    coordinator,
-                    completed_day_periods(local_today, days),
-                    require_complete=True,
+            try:
+                imported.update(
+                    await _async_import_periods(
+                        hass,
+                        coordinator,
+                        completed_day_periods(local_today, days),
+                        require_complete=True,
+                    )
                 )
-            )
+            except SMAProtocolError as err:
+                raise HomeAssistantError(
+                    f"Could not import SMA archive: {err}"
+                ) from err
 
             hass.config_entries.async_update_entry(
                 entry,
@@ -400,9 +405,7 @@ async def async_setup(hass: HomeAssistant, config: dict[str, Any]) -> bool:
             try:
                 archive = await coordinator.async_read_archive(periods)
             except SMAProtocolError as err:
-                raise ServiceValidationError(
-                    f"Could not read SMA archive: {err}"
-                ) from err
+                raise HomeAssistantError(f"Could not read SMA archive: {err}") from err
             inverter_response: dict[str, Any] = {}
             timestamp_sets: list[set[int]] = []
             for serial in coordinator.data:
@@ -429,7 +432,7 @@ async def async_setup(hass: HomeAssistant, config: dict[str, Any]) -> bool:
             if not inverter_response or any(
                 timestamps != timestamp_sets[0] for timestamps in timestamp_sets[1:]
             ):
-                raise ServiceValidationError(
+                raise HomeAssistantError(
                     "SMA inverters returned different archive timestamps"
                 )
             require_all_slots = end_timestamp <= int(_local_today().timestamp())

@@ -7,7 +7,7 @@ from types import SimpleNamespace as NS
 from unittest.mock import AsyncMock, Mock, patch
 
 from homeassistant.config_entries import ConfigEntryState
-from homeassistant.exceptions import ServiceValidationError
+from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 
 from custom_components import sma_bluetooth as m
 from sma_net2.protocol import SMAArchivePoint, SMAProtocolError
@@ -95,15 +95,13 @@ class ServiceTests(unittest.IsolatedAsyncioTestCase):
             [{"timestamp": timestamp, "total_energy_kwh": 11, "power_w": 20}],
         )
         self.co.data["2"] = NS()
-        with self.assertRaisesRegex(
-            ServiceValidationError, "different archive timestamps"
-        ):
+        with self.assertRaisesRegex(HomeAssistantError, "different archive timestamps"):
             await handler(NS(data={"start": self.start, "end": self.end}))
         self.co.data.clear()
-        with self.assertRaises(ServiceValidationError):
+        with self.assertRaises(HomeAssistantError):
             await handler(NS(data={"start": self.start, "end": self.end}))
         self.co.async_read_archive.side_effect = SMAProtocolError("wire")
-        with self.assertRaisesRegex(ServiceValidationError, "Could not read"):
+        with self.assertRaisesRegex(HomeAssistantError, "Could not read"):
             await handler(NS(data={"start": self.start, "end": self.end}))
 
     async def test_import_service_updates_metadata_after_success(self):

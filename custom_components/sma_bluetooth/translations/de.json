@@ -78,6 +78,16 @@
       "reconfigure_confirm": {
         "title": "Geänderte SMA-Topologie bestätigen",
         "description": "Erkannt: **NetID {net_id}**. Gewählter Modus: **{configured_mode}**; wirksamer Modus: **{effective_mode}**. Wechselrichter-Seriennummern: **{serials}**. Aktueller Root-Knoten: **{root}**. Mit Absenden wird der Eintrag ohne Änderung seriennummernbasierter Identitäten aktualisiert und neu geladen."
+      },
+      "reauth_confirm": {
+        "title": "SMA-Passwort aktualisieren",
+        "description": "Gib das neue SMA-Benutzerpasswort für die bestehende Anlage ein. Das Passwort wird bei Tageslicht geprüft. Geräte, Entitäten und Einstellungen bleiben erhalten.",
+        "data": {
+          "password": "SMA-Benutzerpasswort"
+        },
+        "data_description": {
+          "password": "Neues Benutzerpasswort des Wechselrichters, keine Bluetooth-PIN."
+        }
       }
     },
     "error": {
@@ -92,7 +102,10 @@
     "abort": {
       "already_configured": "Diese SMA-Net2-Bluetooth-Anlage ist bereits eingerichtet",
       "cannot_connect": "Die erkannte SMA-Sitzung ist nicht mehr verfügbar; bitte den Dialog erneut starten",
-      "reconfigure_successful": "[%key:common::config_flow::abort::reconfigure_successful%]"
+      "reconfigure_successful": "Die SMA-Anlage wurde erfolgreich neu konfiguriert.",
+      "reauth_successful": "Das SMA-Benutzerpasswort wurde erfolgreich aktualisiert.",
+      "wrong_device": "Der Wechselrichter stimmt nicht mit der bestehenden Anlage überein. Die gespeicherten Zugangsdaten wurden nicht geändert.",
+      "topology_changed": "Die NetID hat sich geändert. Verwende die Neukonfiguration, um die Topologie und das Passwort gemeinsam zu prüfen."
     }
   },
   "selector": {

@@ -22,5 +22,10 @@ class SMAInverterEntity(SMAEntity):
         self._serial = serial
 
     @property
+    def available(self) -> bool:
+        """Do not expose a missing inverter as healthy with stale data."""
+        return super().available and self._serial in self.coordinator.data
+
+    @property
     def device_info(self) -> DeviceInfo:
         return inverter_device_info(self.coordinator, self._serial)

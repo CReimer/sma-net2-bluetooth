@@ -173,3 +173,73 @@ class OwnershipTests(unittest.TestCase):
         self.assertIsNone(o.async_transfer_departing_entry(hass, a))
         a.options[CONF_LAST_DETECTED_NET_ID] = 2
         self.assertIsNone(o.async_transfer_departing_entry(hass, a))
+
+    def test_registry_move_preserves_existing_owner_and_unrelated_entities(self):
+        hass = NS()
+        matching = NS(
+            platform=DOMAIN,
+            unique_id="sma_bluetooth_1_energy",
+            config_entry_id="owner",
+            entity_id="sensor.energy",
+        )
+        unrelated = NS(
+            platform="other",
+            unique_id="sma_bluetooth_1_energy",
+            config_entry_id="old",
+            entity_id="sensor.other",
+        )
+        registry = NS(
+            entities={"energy": matching, "other": unrelated},
+            async_update_entity=Mock(),
+        )
+        devices = NS(
+            async_get_devices=Mock(
+                return_value=[NS(id="dev", config_entry_id="owner")]
+            ),
+            async_update_device=Mock(),
+        )
+        with (
+            patch.object(o.er, "async_get", return_value=registry),
+            patch.object(o.dr, "async_get", return_value=devices),
+        ):
+            o._move_serial_registries(hass, "1", "owner")
+        registry.async_update_entity.assert_not_called()
+        devices.async_update_device.assert_not_called()
+
+    def test_reconciliation_retains_registry_owner_and_claims_new_serial(self):
+        a, b = self.entry("a", []), self.entry("b", ["1"])
+        hass = NS(config_entries=NS(async_entries=Mock(return_value=[a, b])))
+        registry = NS(
+            entities={
+                "energy": NS(
+                    platform=DOMAIN,
+                    unique_id="sma_bluetooth_1_energy",
+                    config_entry_id="b",
+                )
+            }
+        )
+        with (
+            patch.object(o.er, "async_get", return_value=registry),
+            patch.object(o, "_move_serial_registries") as move,
+            patch.object(o, "_sync_overlap_issues"),
+        ):
+            self.assertEqual(o.async_reconcile_ownership(hass, a, ["1", "2"]), {"2"})
+        move.assert_called_once_with(hass, "2", "a")
+
+    def test_transfer_ignores_invalid_identity_records(self):
+        departing, owner = self.entry("old", ["1"]), self.entry("owner", ["2"])
+        for entry in (departing, owner):
+            entry.options[CONF_LAST_DETECTED_NET_ID] = 2
+        departing.data[CONF_KNOWN_INVERTERS].append({"serial": None})
+        hass = NS(
+            config_entries=NS(
+                async_entries=Mock(return_value=[owner]), async_update_entry=Mock()
+            )
+        )
+        with patch.object(o, "_move_serial_registries") as move:
+            self.assertEqual(o.async_transfer_departing_entry(hass, departing), "owner")
+        move.assert_called_once_with(hass, "1", "owner")
+        merged = hass.config_entries.async_update_entry.call_args.kwargs["options"][
+            CONF_KNOWN_INVERTERS
+        ]
+        self.assertEqual([item["serial"] for item in merged], ["1", "2"])

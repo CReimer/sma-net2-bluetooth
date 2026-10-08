@@ -146,8 +146,8 @@ python tools/run_tests.py
 The suite mocks Bluetooth and external service access and exercises config
 flows through Home Assistant’s real flow manager. Every integration Python module is included in coverage, including
 modules not imported by tests. The test command and GitHub Actions both require
-at least **91% line coverage and 91% branch coverage**, checked separately without
-rounding. HTML, XML and JSON reports are written to `coverage-report/` and uploaded
+at least **96% line coverage and 96% branch coverage for every integration
+module and overall**, checked separately without rounding. HTML, XML and JSON reports are written to `coverage-report/` and uploaded
 as the `coverage` artifact by CI. Config-flow line and branch coverage must each
 be 100%, enforced separately from the overall gate.
 
@@ -182,6 +182,64 @@ password. The new topology is tested and confirmed before changes are applied.
 Connection settings are stored in entry data; display name, polling interval
 and the identity cache are stored in entry options. Existing entries migrate
 automatically without changing entity unique IDs or statistics.
+
+## Setup parameters
+
+All five fields are configured in the UI; no YAML configuration is supported.
+Connection tests require a reachable inverter during daylight. The user password
+is masked and never prefilled in password-update forms.
+
+| Field | Required / default | Meaning |
+| --- | --- | --- |
+| Plant Bluetooth address | Required; first discovered device is suggested if available | Address of the selected physical inverter, in `AA:BB:CC:DD:EE:FF` format. Enter it manually if discovery fails. The detected plant is shown before confirmation. |
+| SMA user password | Required for initial setup | Inverter user password; neither the installer password nor a Bluetooth pairing PIN. Reconfigure accepts an empty value to keep the stored password. |
+| Connection mode | Required; `Automatic` | Automatic selects direct communication for NetID 1 and network communication for NetID 2–F. Selected inverter only reads the selected inverter. Complete Bluetooth network requires NetID 2–F and reads that network. |
+| Plant name | Required; `SMA PV` | Display name for the entry and logical plant device. |
+| Polling interval (seconds) | Required; `60`, minimum `60` | Daylight refresh interval. Higher values reduce radio traffic. Overnight refresh waits for sunrise, using Home Assistant's configured location. |
+
+## Configuration parameters
+
+Use **Settings > Devices & services > SMA-Net2 Bluetooth > Reconfigure** to
+change any of the five fields above after setup. They retain the same meanings
+and minimums. Current values are shown, except that the password remains blank.
+The new connection and detected topology must be tested and explicitly confirmed
+before the settings are saved and the entry reloads. Serial-based device/entity
+identities and historical statistics are retained. The confirmed NetID, selected
+serial and identity cache are detected automatically, not editable settings.
+
+### Reconnect after changing the inverter password
+
+If polling fails because the inverter password has changed, Home Assistant
+marks its entities unavailable and requests reauthentication on the entry.
+Open that request under **Settings > Devices & services**, enter the new SMA
+user password, and submit during daylight. A wrong password, unreachable
+inverter or night-time pause keeps the dialog open without changing stored
+credentials. The verified password is saved and the existing entry reloads;
+its devices, entities, options and statistics are retained.
+
+Reauthentication verifies the same plant identity and confirmed NetID. If the
+physical plant or NetID has changed, use **Reconfigure** to verify that change
+instead. The password-only flow does not silently accept a changed topology.
+
+## Availability and maintenance
+
+Live measurements and events are unavailable overnight, while a connection
+fails, or when their inverter is missing from a successful network response.
+Explicitly timestamped clock observations and hub topology diagnostics retain
+their documented meaning overnight. A failed poll marks coordinator-backed
+entities unavailable; the next successful poll restores them. The coordinator
+logs the initial failure once and logs recovery once, without repeating the
+same availability warning on every poll. Cached night-time data does not count
+as recovery from a preceding daytime failure; recovery is logged after the
+next successful daytime poll. Bluetooth recovery operations have separate
+operational logs.
+
+The integration is maintained by [CReimer](https://github.com/CReimer), listed
+in its manifest and repository CODEOWNERS. Report problems through the
+[issue tracker](https://github.com/CReimer/sma-net2-bluetooth/issues), following
+the privacy instructions above. Both sensor and event platforms explicitly use
+coordinator-managed updates; all radio operations pass through the shared
+adapter lock.
 
 ## Use archive actions
 
@@ -281,7 +339,7 @@ legacy entries, follow the Repairs instructions to preserve registry ownership.
 ## Quality scale status
 
 The implementation is being checked against the Home Assistant
-[Bronze checklist](https://developers.home-assistant.io/docs/core/integration-quality-scale/checklist/).
+[Bronze and Silver checklist](https://developers.home-assistant.io/docs/core/integration-quality-scale/checklist/).
 See [quality_scale.yaml](custom_components/sma_bluetooth/quality_scale.yaml)
 for rule-by-rule evidence. This remains a **custom integration**; Core
 submission and an official quality-tier award are not intended. Local brand
@@ -293,5 +351,5 @@ is published separately on PyPI under GPL-3.0-or-later, with wheel and source
 archive. The integration pins that version in its manifest and the test suite
 uses the published package. Its source is in [packages/sma-net2](packages/sma-net2).
 The Home Assistant adapter uses Apache-2.0. The local audit records alignment
-with the applicable Bronze requirements; it is not an official Home Assistant
+with the applicable Bronze and Silver requirements; it is not an official Home Assistant
 tier award.
