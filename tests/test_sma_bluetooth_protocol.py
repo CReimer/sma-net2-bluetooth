@@ -19,14 +19,14 @@ from custom_components.sma_bluetooth import daylight as daylight_module
 from custom_components.sma_bluetooth import device as device_module
 from custom_components.sma_bluetooth import gateway as gateway_module
 from custom_components.sma_bluetooth import ownership as ownership_module
-from custom_components.sma_bluetooth import protocol as protocol_module
+from sma_net2 import protocol as protocol_module
 from custom_components.sma_bluetooth.archive import (
     completed_day_periods,
     cumulative_statistic_sums,
     hourly_last_values,
     timestamp_series_complete,
 )
-from custom_components.sma_bluetooth.models import SMAInverter
+from sma_net2 import SMAInverter
 from custom_components.sma_bluetooth.const import (
     CONF_CONNECTION_MODE,
     CONF_KNOWN_INVERTERS,
@@ -52,7 +52,7 @@ from custom_components.sma_bluetooth.daylight import (
     POLAR_NIGHT_RECHECK_INTERVAL,
     daylight_schedule,
 )
-from custom_components.sma_bluetooth.protocol import (
+from sma_net2.protocol import (
     L2_SIGNATURE,
     SMAArchivePoint,
     SMAClassicClient,

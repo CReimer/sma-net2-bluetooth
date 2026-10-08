@@ -58,18 +58,18 @@ subsequent releases.
 
 ## Integration transition after publication
 
-The custom integration intentionally continues to use its existing local
-protocol implementation while the library is unpublished. Do not add an
-unresolvable PyPI requirement to a released integration.
+The consumer draft removes the bundled protocol/models/discovery modules,
+imports the library API and shared constants, and pins `sma-net2==0.1.0` in the
+manifest. Home Assistant scheduling, adapter recovery, ownership, Recorder
+conversion and entity code remain in the integration. Its CI builds and installs
+a wheel from this checkout to verify the unpublished candidate.
 
-After successful PyPI installation is verified:
+Do not release or merge the consumer transition into a released integration
+until successful installation from PyPI has been verified. After publication:
 
-1. Replace integration imports of protocol, model and discovery implementation
-   with `sma_net2` imports, and remove the inline implementations.
-2. Import shared connection-mode and role constants from `sma_net2.const`.
-3. Pin `sma-net2==0.1.0` in the integration manifest. Keep Home Assistant-only
-   scheduling, adapter recovery, ownership, archive-to-Recorder conversion and
-   entity code in the integration.
+1. Install `sma-net2==0.1.0` from PyPI in a clean environment.
+2. Compare the published artifact/version against the reviewed release.
+3. Switch consumer CI from the checkout wheel to the published pinned package.
 4. Run the full existing integration/flow suite against the published package
    and retain the enforced 100% config-flow and existing overall coverage gates.
 5. Recheck dependency transparency, upstream branding, core tests/documentation

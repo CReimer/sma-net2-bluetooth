@@ -113,8 +113,7 @@ The independently authored Home Assistant adapter Python files marked
 matching Home Assistant Core. See the explicit
 [component license boundary](custom_components/sma_bluetooth/LICENSE.md).
 
-The standalone `packages/sma-net2` communication library and the temporarily
-bundled `protocol.py`, `models.py` and `discovery.py` remain
+The separately distributed `packages/sma-net2` communication library remains
 [GPL-3.0-or-later](LICENSE). Files without an explicit exception also remain
 under GPL-3.0-or-later. This repository currently has mixed licenses.
 
@@ -290,5 +289,16 @@ rating requires Home Assistant core inclusion and review. Local brand assets
 are supplied for modern Home Assistant; an upstream `sma_bluetooth` brands
 entry still needs to be accepted for the official checklist. Core also requires
 a published communication library: [packages/sma-net2](packages/sma-net2) now
-prepares the independent client, tests and release pipeline, but publication and
-the integration dependency switch are still outstanding.
+provides the independent client, tests and release pipeline. The integration
+now pins `sma-net2==0.1.0` and imports its API. **This branch must not be released
+until that version is published on PyPI.** Publication and verification against
+the published artifact remain outstanding.
+
+For development before publication, install the package wheel before running
+the integration tests:
+
+```bash
+python -m pip wheel --no-deps packages/sma-net2 -w library-dist
+python -m pip install library-dist/sma_net2-*.whl
+python tools/run_tests.py
+```

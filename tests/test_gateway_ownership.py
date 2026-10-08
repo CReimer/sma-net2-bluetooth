@@ -3,7 +3,8 @@
 from types import SimpleNamespace as NS
 import unittest
 from unittest.mock import AsyncMock, Mock, patch
-from custom_components.sma_bluetooth import gateway as g, ownership as o, protocol as p
+from custom_components.sma_bluetooth import gateway as g, ownership as o
+from sma_net2 import protocol as p
 from custom_components.sma_bluetooth.const import (
     CONF_CONNECTION_MODE,
     CONF_KNOWN_INVERTERS,

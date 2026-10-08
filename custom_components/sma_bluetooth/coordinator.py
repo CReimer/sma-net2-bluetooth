@@ -13,6 +13,16 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryError
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from sma_net2 import (
+    SMAArchivePoint,
+    SMAAuthenticationError,
+    SMAClassicClient,
+    SMAClockSyncResult,
+    SMAConfigurationError,
+    SMAInverter,
+    SMANetworkModeError,
+    SMAProtocolError,
+)
 
 from .const import (
     CONF_CONNECTION_MODE,
@@ -34,20 +44,10 @@ from .const import (
 )
 from .daylight import daylight_schedule
 from .gateway import SMADaylightError, async_get_adapter_gate
-from .models import SMAInverter
 from .ownership import (
     async_clear_netid_issues,
     async_note_netid_change,
     async_reconcile_ownership,
-)
-from .protocol import (
-    SMAArchivePoint,
-    SMAAuthenticationError,
-    SMAClassicClient,
-    SMAClockSyncResult,
-    SMAConfigurationError,
-    SMANetworkModeError,
-    SMAProtocolError,
 )
 
 type SMABluetoothConfigEntry = ConfigEntry[SMABluetoothCoordinator]

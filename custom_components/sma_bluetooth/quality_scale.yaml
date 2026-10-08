@@ -1,5 +1,5 @@
 # Local Bronze audit. This custom integration has no official Home Assistant tier.
-# Publishing/consuming the communication library, upstream brands and core review remain outstanding.
+# Publishing the communication library and verifying its published consumption, upstream brands and core review remain outstanding.
 rules:
   action-setup:
     status: done
@@ -21,7 +21,7 @@ rules:
     comment: User and reconfigure flows have field descriptions and a masked password selector; connection data and options are separated with v2.1 migration.
   dependency-transparency:
     status: todo
-    comment: packages/sma-net2 prepares the standalone GPL-3.0-or-later protocol/discovery library and public build/publish CI. Publication to PyPI and switching the integration to the released requirement are pending. Core does not permit inline protocol implementations.
+    comment: Device communication now uses the separate GPL-3.0-or-later sma-net2 package pinned in the manifest; no protocol/discovery implementation remains in the integration. CI verifies an installed candidate wheel. PyPI publication and verification against the published release remain pending.
   docs-actions:
     status: done
     comment: README describes get_archive and import_archive fields, bounds, responses, side effects and examples.

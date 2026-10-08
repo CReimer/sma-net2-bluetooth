@@ -12,6 +12,14 @@ from homeassistant import config_entries
 from homeassistant.const import CONF_PASSWORD
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import selector
+from sma_net2 import (
+    SMAAuthenticationError,
+    SMAClassicClient,
+    SMAInverter,
+    SMANetworkModeError,
+    SMAProtocolError,
+)
+from sma_net2.discovery import SMADiscoveryError, async_discover_sma_devices
 
 from .const import (
     CONF_BT_ADDRESS,
@@ -31,16 +39,8 @@ from .const import (
     UPDATE_TIMEOUT,
 )
 from .coordinator import serialize_known_inverters
-from .discovery import SMADiscoveryError, async_discover_sma_devices
 from .gateway import SMADaylightError, async_get_adapter_gate
-from .models import SMAInverter
 from .ownership import entries_claiming_serials
-from .protocol import (
-    SMAAuthenticationError,
-    SMAClassicClient,
-    SMANetworkModeError,
-    SMAProtocolError,
-)
 
 _BT_ADDRESS_RE = re.compile(r"^(?:[0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$")
 
