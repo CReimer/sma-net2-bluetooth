@@ -160,7 +160,6 @@ async def _async_import_periods(
     before, after = await asyncio.gather(
         recorder.async_add_executor_job(
             statistics_during_period,
-            StatisticsRow,
             hass,
             first_hour - STATISTICS_ANCHOR_LOOKBACK,
             first_hour,
@@ -171,7 +170,6 @@ async def _async_import_periods(
         ),
         recorder.async_add_executor_job(
             statistics_during_period,
-            StatisticsRow,
             hass,
             end_hour,
             end_hour + STATISTICS_ANCHOR_LOOKBACK,

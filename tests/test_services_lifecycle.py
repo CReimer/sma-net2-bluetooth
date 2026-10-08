@@ -1,6 +1,7 @@
 """Archive service validation, Recorder import and entry lifecycle contracts."""
 
 import asyncio
+import inspect
 import unittest
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace as NS
@@ -166,6 +167,11 @@ class ServiceTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual([row["sum"] for row in rows], [3, 4])
             self.assertEqual(importer.call_args.args[1]["unit_of_measurement"], "kWh")
             recorder.async_block_till_done.assert_awaited_once()
+            # Executor mocks must still honor the real Recorder API signature.
+            for call in recorder.async_add_executor_job.call_args_list:
+                function, *arguments = call.args
+                inspect.signature(function).bind(*arguments)
+                self.assertIs(arguments[0], self.hass)
             recorder.async_add_executor_job.side_effect = [{}, {}]
             await m._async_import_periods(
                 self.hass, self.co, [], require_complete=False
