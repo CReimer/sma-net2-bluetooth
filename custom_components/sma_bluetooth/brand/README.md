@@ -7,5 +7,5 @@ All product names, trademarks and registered trademarks belong to their
 respective owners. Their use does not imply affiliation with or endorsement by
 SMA Solar Technology AG.
 
-The repository's GPL license applies to the source code. It does not grant
+The source-code licenses are documented in the component's LICENSE.md. They do not grant
 rights to trademarks or brand artwork.

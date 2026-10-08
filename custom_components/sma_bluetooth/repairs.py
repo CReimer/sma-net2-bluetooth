@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """Guided Repairs flows for SMA topology and ownership changes."""
 
 from __future__ import annotations

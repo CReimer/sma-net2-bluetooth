@@ -1,0 +1,81 @@
+name: SMA-Net2 library
+
+on:
+  push:
+    branches: ["**"]
+    tags: ["sma-net2-v*"]
+    paths:
+      - "packages/sma-net2/**"
+      - "tools/*library*.py"
+      - ".github/workflows/sma-net2-library.yml"
+  pull_request:
+    paths:
+      - "packages/sma-net2/**"
+      - "tools/*library*.py"
+      - ".github/workflows/sma-net2-library.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Standalone tests (Python ${{ matrix.python }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ["3.11", "3.14"]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python }}
+      - run: python -m pip install -e 'packages/sma-net2[test]'
+      - name: Test without Home Assistant
+        working-directory: packages/sma-net2
+        run: |
+          python -m coverage run --rcfile=pyproject.toml -m unittest discover -s tests -v
+          python -m coverage report --rcfile=pyproject.toml
+
+  build:
+    name: Wheel and source distribution
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.14"
+      - run: python -m pip install build twine
+      - name: Validate release tag
+        if: startsWith(github.ref, 'refs/tags/sma-net2-v')
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: python tools/check_library_release.py "$RELEASE_TAG"
+      - run: python -m build packages/sma-net2
+      - run: python -m twine check packages/sma-net2/dist/*
+      - run: python tools/verify_library_dist.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sma-net2-dist
+          path: packages/sma-net2/dist/*
+          if-no-files-found: error
+
+  publish:
+    name: Publish library to PyPI
+    needs: build
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/sma-net2-v') && github.repository == 'CReimer/sma-net2-bluetooth'
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/sma-net2
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: sma-net2-dist
+          path: dist
+      - name: Publish with Trusted Publishing
+        uses: pypa/gh-action-pypi-publish@v1.14.2

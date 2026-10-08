@@ -108,14 +108,22 @@ maintainer.
 
 ## License and attribution
 
-The source code is licensed under the
-[GNU General Public License v3.0 or later](LICENSE) (`GPL-3.0-or-later`).
+The independently authored Home Assistant adapter Python files marked
+`SPDX-License-Identifier: Apache-2.0` use [Apache-2.0](LICENSES/Apache-2.0.txt),
+matching Home Assistant Core. See the explicit
+[component license boundary](custom_components/sma_bluetooth/LICENSE.md).
+
+The standalone `packages/sma-net2` communication library and the temporarily
+bundled `protocol.py`, `models.py` and `discovery.py` remain
+[GPL-3.0-or-later](LICENSE). Files without an explicit exception also remain
+under GPL-3.0-or-later. This repository currently has mixed licenses.
 
 The Python SMA protocol implementation adapts work from
 [sma-bluetooth/sma-bluetooth](https://github.com/sma-bluetooth/sma-bluetooth),
-copyright Wim Hofman and Stephen Collier, 2010–2011, also licensed under
-GPL-3.0-or-later. The repository does not distribute the upstream C source,
-reference binaries or private installation data.
+copyright Wim Hofman and Stephen Collier, 2010–2011. Its GPL license and
+attribution remain intact. Package extraction does not remove GPL obligations
+for combined distributions. The repository does not distribute the upstream
+C source, reference binaries or private installation data.
 
 ## Trademark legal notice
 
@@ -280,4 +288,7 @@ for rule-by-rule evidence and remaining upstream work. This is a **custom
 integration**, not an officially awarded Bronze integration. The official
 rating requires Home Assistant core inclusion and review. Local brand assets
 are supplied for modern Home Assistant; an upstream `sma_bluetooth` brands
-entry still needs to be accepted for the official checklist.
+entry still needs to be accepted for the official checklist. Core also requires
+a published communication library: [packages/sma-net2](packages/sma-net2) now
+prepares the independent client, tests and release pipeline, but publication and
+the integration dependency switch are still outstanding.

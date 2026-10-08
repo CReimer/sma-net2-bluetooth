@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """Shared entity identity and coordinator lifecycle for SMA Bluetooth."""
 
 from homeassistant.helpers.device_registry import DeviceInfo

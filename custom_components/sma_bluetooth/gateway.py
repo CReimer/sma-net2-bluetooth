@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """Adapter-wide RFCOMM session serialization for SMA Bluetooth."""
 
 from __future__ import annotations

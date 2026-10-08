@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """Event entities for SMA inverter state transitions."""
 
 from __future__ import annotations
