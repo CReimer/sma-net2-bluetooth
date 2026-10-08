@@ -72,9 +72,9 @@ until successful installation from PyPI has been verified. After publication:
 3. Switch consumer CI from the checkout wheel to the published pinned package.
 4. Run the full existing integration/flow suite against the published package
    and retain the enforced 100% config-flow and existing overall coverage gates.
-5. Recheck dependency transparency, upstream branding, core tests/documentation
-   structure and contribution requirements before requesting the official tier.
+5. Recheck dependency transparency and the local Bronze audit against the
+   published package. This project remains a custom integration; no Core or
+   brands submission is intended.
 
-This release preparation does not award a Home Assistant quality tier or
-resolve Home Assistant core review. It does not change or relicense the
-protocol's GPL-3.0-or-later notices.
+This release preparation does not award an official Home Assistant quality
+tier. It does not change or relicense the protocol's GPL-3.0-or-later notices.

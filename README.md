@@ -99,6 +99,8 @@ Run the tests against the pinned Home Assistant release:
 
 ```bash
 python -m pip install -r requirements-test.txt
+python -m pip wheel --no-deps packages/sma-net2 -w library-dist
+python -m pip install library-dist/sma_net2-*.whl
 python tools/run_tests.py
 ```
 
@@ -140,6 +142,8 @@ Use Python 3.14 and the pinned Home Assistant test dependencies:
 
 ```bash
 python -m pip install -r requirements-test.txt
+python -m pip wheel --no-deps packages/sma-net2 -w library-dist
+python -m pip install library-dist/sma_net2-*.whl
 python tools/run_tests.py
 ```
 
@@ -283,12 +287,12 @@ legacy entries, follow the Repairs instructions to preserve registry ownership.
 The implementation is being checked against the Home Assistant
 [Bronze checklist](https://developers.home-assistant.io/docs/core/integration-quality-scale/checklist/).
 See [quality_scale.yaml](custom_components/sma_bluetooth/quality_scale.yaml)
-for rule-by-rule evidence and remaining upstream work. This is a **custom
-integration**, not an officially awarded Bronze integration. The official
-rating requires Home Assistant core inclusion and review. Local brand assets
-are supplied for modern Home Assistant; an upstream `sma_bluetooth` brands
-entry still needs to be accepted for the official checklist. Core also requires
-a published communication library: [packages/sma-net2](packages/sma-net2) now
+for rule-by-rule evidence. This remains a **custom integration**; Core
+submission and an official quality-tier award are not intended. Local brand
+assets are supplied for modern Home Assistant, so no upstream brands
+submission is required for this project.
+
+The communication library [packages/sma-net2](packages/sma-net2)
 provides the independent client, tests and release pipeline. The integration
 now pins `sma-net2==0.1.0` and imports its API. **This branch must not be released
 until that version is published on PyPI.** Publication and verification against

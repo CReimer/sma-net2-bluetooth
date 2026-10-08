@@ -1,5 +1,6 @@
 # Local Bronze audit. This custom integration has no official Home Assistant tier.
-# Publishing the communication library and verifying its published consumption, upstream brands and core review remain outstanding.
+# Custom-integration audit only; no Core submission or official tier is intended.
+# Publication and verification of the separate communication library remain pending.
 rules:
   action-setup:
     status: done
@@ -8,8 +9,8 @@ rules:
     status: done
     comment: coordinator.py uses a configurable interval (default/minimum 60 seconds) and daylight.py defers overnight polling until sunrise.
   brands:
-    status: todo
-    comment: Local brand/ PNG assets exist for Home Assistant 2026.3+. contributions/brands contains a verified patch reusing the existing SMA assets via a core integration symlink. Personal contributor review, submission alongside the Core PR, and upstream acceptance remain pending.
+    status: done
+    comment: Local brand/ PNG assets provide the custom-integration branding supported by Home Assistant 2026.3+. No upstream brands entry is intended; this local audit does not award an official Core tier.
   common-modules:
     status: done
     comment: Shared update logic is in coordinator.py, entity lifecycle and inverter identity in entity.py, and device metadata in device.py.
