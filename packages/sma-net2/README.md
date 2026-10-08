@@ -6,7 +6,6 @@ and the inverter's five-minute archive. It has no Home Assistant dependency.
 
 This is the communication library extracted from
 [SMA-Net2 Bluetooth for Home Assistant](https://github.com/CReimer/sma-net2-bluetooth).
-The initial package is prepared for publication and is **not yet on PyPI**.
 
 ## Requirements
 
@@ -19,9 +18,17 @@ ESPHome BLE proxies do not support this protocol. The known tested hardware is
 SMA Sunny Boy SB 3000HF-30; other legacy Bluetooth models may provide different
 measurement sets. This project is not affiliated with or endorsed by SMA.
 
+## Installation
+
+Install a published release from PyPI:
+
+```sh
+python -m pip install sma-net2==0.1.0
+```
+
 ## Development installation
 
-Until a release is published, install the package from this directory:
+For development, install from the package source directory:
 
 ```sh
 python -m pip install -e '.[test]'
