@@ -1324,6 +1324,7 @@ class SMASessionGateTests(unittest.IsolatedAsyncioTestCase):
             "serial": SMAInverter(serial="serial", values={"power": 10})
         }
         coordinator._known_inverters = {}
+        coordinator.last_update_success = True
         coordinator.async_run_session = AsyncMock()
         sleep_interval = timedelta(hours=8)
 

@@ -311,6 +311,7 @@ class ConfigFlowManagerTests(unittest.IsolatedAsyncioTestCase):
         self.hass.config_entries.async_reload.assert_not_awaited()
 
     async def test_update_failure_logs_once_recovers_and_starts_reauth(self):
+        from datetime import timedelta
         from types import SimpleNamespace
 
         from custom_components.sma_bluetooth import coordinator as c
@@ -324,7 +325,7 @@ class ConfigFlowManagerTests(unittest.IsolatedAsyncioTestCase):
         with (
             patch.object(
                 c, "daylight_schedule", return_value=SimpleNamespace(active=True)
-            ),
+            ) as schedule,
             patch.object(c, "async_reconcile_ownership", return_value={"1"}),
             patch.object(
                 co,
@@ -342,6 +343,16 @@ class ConfigFlowManagerTests(unittest.IsolatedAsyncioTestCase):
             await co.async_refresh()
             self.assertFalse(sensor.available)
             await co.async_refresh()
+            schedule.return_value = SimpleNamespace(
+                active=False, next_interval=timedelta(hours=6)
+            )
+            await co.async_enter_night()
+            self.assertFalse(co.last_update_success)
+            await co.async_refresh()
+            self.assertFalse(co.last_update_success)
+            self.assertFalse(sensor.available)
+            self.assertEqual(session.await_count, 2)
+            schedule.return_value = SimpleNamespace(active=True)
             await co.async_refresh()
             self.assertTrue(sensor.available)
             self.assertEqual(session.await_count, 3)

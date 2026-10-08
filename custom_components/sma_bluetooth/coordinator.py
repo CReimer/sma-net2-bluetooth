@@ -42,7 +42,7 @@ from .const import (
     RFCOMM_SESSION_ATTEMPTS,
     UPDATE_TIMEOUT,
 )
-from .daylight import daylight_schedule
+from .daylight import DaylightSchedule, daylight_schedule
 from .gateway import SMADaylightError, async_get_adapter_gate
 from .ownership import (
     async_clear_netid_issues,
@@ -160,12 +160,18 @@ class SMABluetoothCoordinator(DataUpdateCoordinator[dict[str, SMAInverter]]):
         self.archive_listener_remove: Callable[[], None] | None = None
         self.archive_last_attempt = None
 
+    def _night_data(self, schedule: DaylightSchedule) -> dict[str, SMAInverter]:
+        """Preserve a connection failure until a real daytime poll succeeds."""
+        self.sleeping = True
+        self.update_interval = schedule.next_interval
+        if not self.last_update_success:
+            raise UpdateFailed("SMA polling paused until sunrise after a failed update")
+        return self.data or self._known_inverters
+
     async def _async_update_data(self) -> dict[str, SMAInverter]:
         schedule = daylight_schedule(self.hass)
         if not schedule.active:
-            self.sleeping = True
-            self.update_interval = schedule.next_interval
-            return self.data or self._known_inverters
+            return self._night_data(schedule)
 
         self.sleeping = False
         self.update_interval = self.daytime_interval
@@ -174,10 +180,7 @@ class SMABluetoothCoordinator(DataUpdateCoordinator[dict[str, SMAInverter]]):
                 lambda client: client.async_query_active(), timeout=UPDATE_TIMEOUT
             )
         except SMADaylightError:
-            schedule = daylight_schedule(self.hass)
-            self.sleeping = True
-            self.update_interval = schedule.next_interval
-            return self.data or self._known_inverters
+            return self._night_data(daylight_schedule(self.hass))
         except SMAAuthenticationError as err:
             raise ConfigEntryAuthFailed(str(err)) from err
         except SMANetworkModeError as err:
@@ -329,7 +332,11 @@ class SMABluetoothCoordinator(DataUpdateCoordinator[dict[str, SMAInverter]]):
             return
         self.sleeping = True
         self.update_interval = schedule.next_interval
-        self.async_set_updated_data(self.data or self._known_inverters)
+        if self.last_update_success:
+            self.async_set_updated_data(self.data or self._known_inverters)
+        else:
+            # Cached night values must not erase a preceding connection failure.
+            self.async_update_listeners()
 
     async def async_read_archive(
         self, periods: list[int | tuple[int, int]]

@@ -67,7 +67,7 @@ class SilverContracts(unittest.TestCase):
         with redirect_stdout(StringIO()):
             self.assertFalse(check_summary("module", summary(95, 100)))
             self.assertFalse(check_summary("module", summary(100, 95)))
-            self.assertFalse(check_summary("module", summary(959, 1000, 1000)))
+            self.assertFalse(check_summary("module", summary(95999, 100000, 100000)))
             self.assertTrue(check_summary("module", summary(96, 96)))
             self.assertTrue(check_summary("no branches", summary(0, 0, 0)))
             self.assertFalse(

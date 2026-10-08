@@ -82,7 +82,7 @@ rules:
     comment: CReimer maintains the integration, is named in manifest.codeowners and .github/CODEOWNERS, and is linked with the issue tracker in README.
   log-when-unavailable:
     status: done
-    comment: Poll failures raise UpdateFailed and use DataUpdateCoordinator's transition logging. A real coordinator test verifies one failure log across repeated failed polls and one recovery log.
+    comment: Poll failures raise UpdateFailed and use DataUpdateCoordinator's transition logging. A real coordinator test verifies one failure log across repeated failures and night-time cache use, and one recovery log only after an actual successful daytime poll.
   parallel-updates:
     status: done
     comment: sensor.py and event.py explicitly set PARALLEL_UPDATES=0 because coordinator refreshes and the adapter-wide session gate serialize radio access.

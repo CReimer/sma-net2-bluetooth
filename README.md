@@ -229,8 +229,10 @@ Explicitly timestamped clock observations and hub topology diagnostics retain
 their documented meaning overnight. A failed poll marks coordinator-backed
 entities unavailable; the next successful poll restores them. The coordinator
 logs the initial failure once and logs recovery once, without repeating the
-same availability warning on every poll. Bluetooth recovery operations have
-separate operational logs.
+same availability warning on every poll. Cached night-time data does not count
+as recovery from a preceding daytime failure; recovery is logged after the
+next successful daytime poll. Bluetooth recovery operations have separate
+operational logs.
 
 The integration is maintained by [CReimer](https://github.com/CReimer), listed
 in its manifest and repository CODEOWNERS. Report problems through the
