@@ -165,5 +165,5 @@ against each installed artifact. CI runs Python 3.11 and 3.14 before publishing.
 The package includes a PEP 561 `py.typed` marker. All runtime modules pass
 strict mypy. `MeasurementValue` is `int | float | str | None`; diagnostics use
 `SMAClientDiagnostics` and `SMAInverterDiagnostics` TypedDict contracts. Archive
-periods accept `Sequence[tuple[int, int]]`. See `typing_examples/usage.py` for
+periods accept `Sequence[int | tuple[int, int]]`. See `typing_examples/usage.py` for
 a checked public-API consumer. CI checks both source and installed artifacts.
