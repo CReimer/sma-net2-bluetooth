@@ -9,9 +9,9 @@ from unittest.mock import AsyncMock, Mock, patch
 
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
+from sma_net2.protocol import SMAArchivePoint, SMAProtocolError
 
 from custom_components import sma_bluetooth as m
-from sma_net2.protocol import SMAArchivePoint, SMAProtocolError
 from tests.test_coordinator_platforms import make_coordinator
 
 
