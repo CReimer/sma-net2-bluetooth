@@ -17,6 +17,7 @@ import random
 import socket
 import struct
 import time
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Self
 
@@ -30,7 +31,7 @@ from .const import (
     NETWORK_ROLE_PARTICIPANT,
     NETWORK_ROLE_ROOT,
 )
-from .models import SMAInverter
+from .models import SMAClientDiagnostics, SMAInverter
 
 APP_SUSY_ID = 125
 ANY_SUSY_ID = 0xFFFF
@@ -161,23 +162,23 @@ class SMAClockSyncResult:
     reason: str
 
 
-def _u16(data: bytes, offset: int) -> int:
-    return struct.unpack_from("<H", data, offset)[0]
+def _u16(data: bytes | bytearray, offset: int) -> int:
+    return int(struct.unpack_from("<H", data, offset)[0])
 
 
-def _u32(data: bytes, offset: int) -> int:
-    return struct.unpack_from("<I", data, offset)[0]
+def _u32(data: bytes | bytearray, offset: int) -> int:
+    return int(struct.unpack_from("<I", data, offset)[0])
 
 
-def _i32(data: bytes, offset: int) -> int:
-    return struct.unpack_from("<i", data, offset)[0]
+def _i32(data: bytes | bytearray, offset: int) -> int:
+    return int(struct.unpack_from("<i", data, offset)[0])
 
 
-def _u64(data: bytes, offset: int) -> int:
-    return struct.unpack_from("<Q", data, offset)[0]
+def _u64(data: bytes | bytearray, offset: int) -> int:
+    return int(struct.unpack_from("<Q", data, offset)[0])
 
 
-def _fcs(data: bytes) -> int:
+def _fcs(data: bytes | bytearray) -> int:
     checksum = 0xFFFF
     for value in data:
         checksum ^= value
@@ -186,7 +187,7 @@ def _fcs(data: bytes) -> int:
     return checksum ^ 0xFFFF
 
 
-def _escape(data: bytes) -> bytes:
+def _escape(data: bytes | bytearray) -> bytes:
     result = bytearray()
     for value in data:
         if value in RESERVED:
@@ -261,7 +262,7 @@ class SMAClassicClient:
         self.sock: socket.socket | None = None
         self.devices: list[_Device] = []
         self._session_active = False
-        self._signals: dict[bytes, float] = {}
+        self._signals: dict[bytes, float | None] = {}
         self.net_id: int | None = None
         self.effective_mode: str | None = None
         self.root_serial: str | None = None
@@ -280,7 +281,7 @@ class SMAClassicClient:
             return self.format_bluetooth_address(self.root_address)
         return None
 
-    def diagnostics(self) -> dict[str, object]:
+    def diagnostics(self) -> SMAClientDiagnostics:
         """Return a serializable session summary without credentials or identifiers."""
         return {
             "configured_mode": self.connection_mode,
@@ -724,15 +725,19 @@ class SMAClassicClient:
             elif lri in (LRI_OPERATION_HEALTH, LRI_RELAY_STATUS):
                 tag = _active_attribute(record)
                 key = "status" if lri == LRI_OPERATION_HEALTH else "relay_status"
-                values[key] = STATUS_TAGS.get(
-                    tag, str(tag) if tag is not None else None
+                values[key] = (
+                    STATUS_TAGS.get(tag, str(tag)) if tag is not None else None
                 )
             elif lri == LRI_DEVICE_NAME:
                 inverter.name = record[8:].split(b"\0", 1)[0].decode(errors="replace")
             elif lri in (LRI_DEVICE_CLASS, LRI_DEVICE_MODEL):
                 tag = _active_attribute(record)
                 if lri == LRI_DEVICE_MODEL:
-                    inverter.model = MODEL_TAGS.get(tag, f"SMA model {tag}")
+                    inverter.model = (
+                        MODEL_TAGS.get(tag, f"SMA model {tag}")
+                        if tag is not None
+                        else "SMA model None"
+                    )
                 elif not inverter.model and tag in CLASS_TAGS:
                     inverter.model = CLASS_TAGS[tag]
             elif lri == LRI_SOFTWARE_VERSION and len(record) >= 28:
@@ -955,7 +960,7 @@ class SMAClassicClient:
                     for key, value in device.inverter.values.items()
                     if key.startswith("dc_power_")
                     and key != "dc_power_total"
-                    and value is not None
+                    and isinstance(value, (int, float))
                 ]
                 device.inverter.values["dc_power_total"] = (
                     sum(dc_power_values) if dc_power_values else None
@@ -975,7 +980,7 @@ class SMAClassicClient:
             await self.async_stop_session()
 
     async def async_read_archive_active(
-        self, periods: list[int | tuple[int, int]]
+        self, periods: Sequence[int | tuple[int, int]]
     ) -> dict[str, list[SMAArchivePoint]]:
         """Read archive days through an already authenticated session."""
         if not self._session_active:
@@ -995,7 +1000,7 @@ class SMAClassicClient:
         return result
 
     async def async_read_archive(
-        self, periods: list[int | tuple[int, int]]
+        self, periods: Sequence[int | tuple[int, int]]
     ) -> dict[str, list[SMAArchivePoint]]:
         """Read selected archive days without changing inverter settings."""
         await self.async_start_session()

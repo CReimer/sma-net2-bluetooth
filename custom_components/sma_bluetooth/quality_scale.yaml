@@ -155,3 +155,13 @@ rules:
   stale-devices:
     status: done
     comment: async_remove_config_entry_device allows explicit deletion of an inverter absent from a successful awake poll, rejects live devices/hub/outages/sleep. Temporary radio absence never automatically deletes registry/history; tests/test_gold_contracts.py.
+  # Platinum
+  async-dependency:
+    status: done
+    comment: sma-net2 uses nonblocking asyncio RFCOMM sockets and awaited dbus-fast calls; socketpair tests prove pending reads yield to the event loop.
+  inject-websession:
+    status: exempt
+    comment: This local Bluetooth Classic integration and library do not use HTTP or a web session.
+  strict-typing:
+    status: done
+    comment: All integration and library runtime modules pass pinned strict mypy in CI. Installed wheel and sdist include py.typed and pass valid and invalid public API consumer checks.

@@ -4,7 +4,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TypeAlias, TypedDict
+
+MeasurementValue: TypeAlias = int | float | str | None
 
 
 @dataclass(slots=True)
@@ -20,7 +22,7 @@ class SMAInverter:
     network_role: str | None = None
     record_timestamp: int | None = None
     record_received_at: float | None = None
-    values: dict[str, Any] = field(default_factory=dict)
+    values: dict[str, MeasurementValue] = field(default_factory=dict)
 
     @property
     def record_clock_difference(self) -> float | None:
@@ -28,3 +30,23 @@ class SMAInverter:
         if self.record_timestamp is None or self.record_received_at is None:
             return None
         return self.record_timestamp - self.record_received_at
+
+
+class SMAInverterDiagnostics(TypedDict):
+    """Anonymous metadata for one observed inverter."""
+
+    model: str | None
+    software_version: str | None
+    available_values: list[str]
+
+
+class SMAClientDiagnostics(TypedDict):
+    """Privacy-safe, serializable session state."""
+
+    configured_mode: str
+    effective_mode: str | None
+    net_id: int | None
+    transport_open: bool
+    session_active: bool
+    inverter_count: int
+    inverters: list[SMAInverterDiagnostics]

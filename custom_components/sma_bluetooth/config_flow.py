@@ -6,12 +6,12 @@ from __future__ import annotations
 import re
 from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, cast
 
 import voluptuous as vol
 from homeassistant import config_entries
+from homeassistant.config_entries import ConfigFlowResult
 from homeassistant.const import CONF_PASSWORD
-from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import selector
 from sma_net2 import (
     SMAAuthenticationError,
@@ -39,7 +39,7 @@ from .const import (
     MIN_SCAN_INTERVAL,
     UPDATE_TIMEOUT,
 )
-from .coordinator import serialize_known_inverters
+from .coordinator import SMABluetoothConfigEntry, serialize_known_inverters
 from .gateway import SMADaylightError, async_get_adapter_gate
 from .ownership import entries_claiming_serials
 
@@ -66,6 +66,14 @@ class SMABluetoothConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self._discovered: dict[str, str] = {}
         self._pending_data: dict[str, Any] | None = None
         self._pending_probe: _ProbeResult | None = None
+
+    def _get_reconfigure_entry(self) -> SMABluetoothConfigEntry:
+        """Narrow the domain-filtered HA entry at the framework boundary."""
+        return cast(SMABluetoothConfigEntry, super()._get_reconfigure_entry())
+
+    def _get_reauth_entry(self) -> SMABluetoothConfigEntry:
+        """Narrow the existing SMA entry for password-only reauthentication."""
+        return cast(SMABluetoothConfigEntry, super()._get_reauth_entry())
 
     async def _async_discover(self) -> bool:
         try:
@@ -97,7 +105,9 @@ class SMABluetoothConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             timeout=UPDATE_TIMEOUT,
         )
 
-    def _address_selector(self, default: str | None) -> tuple[Any, str | None]:
+    def _address_selector(
+        self, default: str | None
+    ) -> tuple[type[str] | selector.SelectSelector, str | None]:
         options = dict(self._discovered)
         if default and default not in options:
             options[default] = "Configured SMA device"
@@ -163,7 +173,7 @@ class SMABluetoothConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self,
         user_input: dict[str, Any],
         *,
-        existing_entry: config_entries.ConfigEntry | None,
+        existing_entry: SMABluetoothConfigEntry | None,
     ) -> str | None:
         address = str(user_input[CONF_BT_ADDRESS]).upper()
         user_input[CONF_BT_ADDRESS] = address
@@ -239,7 +249,7 @@ class SMABluetoothConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
-    ) -> FlowResult:
+    ) -> ConfigFlowResult:
         """Select one visible device and validate exactly that SMA system."""
         errors: dict[str, str] = {}
         if user_input is None and not await self._async_discover():
@@ -264,7 +274,7 @@ class SMABluetoothConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def async_step_confirm(
         self, user_input: dict[str, Any] | None = None
-    ) -> FlowResult:
+    ) -> ConfigFlowResult:
         """Create the confirmed entry after showing detected topology facts."""
         if self._pending_data is None or self._pending_probe is None:
             return self.async_abort(reason="cannot_connect")
@@ -290,7 +300,7 @@ class SMABluetoothConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def async_step_reconfigure(
         self, user_input: dict[str, Any] | None = None
-    ) -> FlowResult:
+    ) -> ConfigFlowResult:
         """Re-detect and explicitly confirm a changed SMA topology."""
         entry = self._get_reconfigure_entry()
         errors: dict[str, str] = {}
@@ -314,13 +324,15 @@ class SMABluetoothConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             errors=errors,
         )
 
-    async def async_step_reauth(self, entry_data: Mapping[str, Any]) -> FlowResult:
+    async def async_step_reauth(
+        self, entry_data: Mapping[str, Any]
+    ) -> ConfigFlowResult:
         """Request a replacement password for the existing plant."""
         return await self.async_step_reauth_confirm()
 
     async def async_step_reauth_confirm(
         self, user_input: dict[str, Any] | None = None
-    ) -> FlowResult:
+    ) -> ConfigFlowResult:
         """Verify credentials without changing plant identity or topology."""
         entry = self._get_reauth_entry()
         errors: dict[str, str] = {}
@@ -363,7 +375,7 @@ class SMABluetoothConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def async_step_reconfigure_confirm(
         self, user_input: dict[str, Any] | None = None
-    ) -> FlowResult:
+    ) -> ConfigFlowResult:
         """Apply a confirmed topology while retaining registry identities."""
         if self._pending_data is None or self._pending_probe is None:
             return self.async_abort(reason="cannot_connect")

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "sma-net2"
-version = "0.1.1"
+version = "0.1.2"
 description = "Async SMA-Net2 Bluetooth Classic inverter protocol client"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -32,7 +32,7 @@ Source = "https://github.com/CReimer/sma-net2-bluetooth/tree/main/packages/sma-n
 Issues = "https://github.com/CReimer/sma-net2-bluetooth/issues"
 
 [project.optional-dependencies]
-test = ["coverage==7.15.3"]
+test = ["coverage==7.15.3", "mypy==2.4.0"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -48,3 +48,9 @@ source = ["sma_net2"]
 show_missing = true
 precision = 2
 fail_under = 96
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_unreachable = true
+follow_imports = "silent"

@@ -4,9 +4,8 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-from typing import Any
+from typing import TYPE_CHECKING, Any, cast
 
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
@@ -28,6 +27,9 @@ from .const import (
     EFFECTIVE_MODE_SINGLE,
 )
 
+if TYPE_CHECKING:
+    from .coordinator import SMABluetoothConfigEntry
+
 ISSUE_OVERLAP_PREFIX = "serial_overlap_"
 ISSUE_NETID_PREFIXES = (
     "network_to_single_",
@@ -36,7 +38,7 @@ ISSUE_NETID_PREFIXES = (
 )
 
 
-def _raw_known_inverters(entry: ConfigEntry) -> list[dict[str, Any]]:
+def _raw_known_inverters(entry: SMABluetoothConfigEntry) -> list[dict[str, Any]]:
     """Return the entry's authoritative identity snapshot."""
     raw = entry.options.get(
         CONF_KNOWN_INVERTERS, entry.data.get(CONF_KNOWN_INVERTERS, [])
@@ -46,7 +48,7 @@ def _raw_known_inverters(entry: ConfigEntry) -> list[dict[str, Any]]:
     return [item for item in raw if isinstance(item, dict)]
 
 
-def entry_known_serials(entry: ConfigEntry) -> set[str]:
+def entry_known_serials(entry: SMABluetoothConfigEntry) -> set[str]:
     """Return the serials currently claimed by one config entry."""
     return {
         str(item["serial"])
@@ -60,11 +62,15 @@ def entries_claiming_serials(
     serials: Iterable[str],
     *,
     exclude_entry_id: str | None = None,
-) -> dict[str, list[ConfigEntry]]:
+) -> dict[str, list[SMABluetoothConfigEntry]]:
     """Return configured entries claiming each requested serial."""
     requested = set(serials)
-    claims = {serial: [] for serial in requested}
-    for entry in hass.config_entries.async_entries(DOMAIN):
+    claims: dict[str, list[SMABluetoothConfigEntry]] = {
+        serial: [] for serial in requested
+    }
+    for entry in cast(
+        "list[SMABluetoothConfigEntry]", hass.config_entries.async_entries(DOMAIN)
+    ):
         if entry.entry_id == exclude_entry_id:
             continue
         for serial in requested & entry_known_serials(entry):
@@ -80,7 +86,7 @@ def _effective_mode(mode: str, net_id: int) -> str:
     return EFFECTIVE_MODE_NETWORK
 
 
-def _entry_sort_key(entry: ConfigEntry) -> tuple[str, str]:
+def _entry_sort_key(entry: SMABluetoothConfigEntry) -> tuple[str, str]:
     return (str(getattr(entry, "created_at", "")), entry.entry_id)
 
 
@@ -121,8 +127,10 @@ def _move_serial_registries(
 
 def _sync_overlap_issues(hass: HomeAssistant) -> None:
     """Create exact overlap issues and remove issues that are now resolved."""
-    claims: dict[str, list[ConfigEntry]] = {}
-    for entry in hass.config_entries.async_entries(DOMAIN):
+    claims: dict[str, list[SMABluetoothConfigEntry]] = {}
+    for entry in cast(
+        "list[SMABluetoothConfigEntry]", hass.config_entries.async_entries(DOMAIN)
+    ):
         for serial in entry_known_serials(entry):
             claims.setdefault(serial, []).append(entry)
 
@@ -167,11 +175,13 @@ def async_refresh_overlap_issues(hass: HomeAssistant) -> None:
 
 
 def async_reconcile_ownership(
-    hass: HomeAssistant, entry: ConfigEntry, serials: Iterable[str]
+    hass: HomeAssistant, entry: SMABluetoothConfigEntry, serials: Iterable[str]
 ) -> set[str]:
     """Assign serials deterministically while preserving historical registry rows."""
     requested = set(serials)
-    all_entries = hass.config_entries.async_entries(DOMAIN)
+    all_entries = cast(
+        "list[SMABluetoothConfigEntry]", hass.config_entries.async_entries(DOMAIN)
+    )
     entries_by_id = {candidate.entry_id: candidate for candidate in all_entries}
     claims = entries_claiming_serials(hass, requested)
     owned: set[str] = set()
@@ -211,7 +221,7 @@ def async_reconcile_ownership(
 
 def async_note_netid_change(
     hass: HomeAssistant,
-    entry: ConfigEntry,
+    entry: SMABluetoothConfigEntry,
     detected_net_id: int,
     detected_serials: Iterable[str],
 ) -> None:
@@ -280,7 +290,7 @@ def async_clear_netid_issues(hass: HomeAssistant, entry_id: str) -> None:
 
 
 def async_transfer_departing_entry(
-    hass: HomeAssistant, departing: ConfigEntry
+    hass: HomeAssistant, departing: SMABluetoothConfigEntry
 ) -> str | None:
     """Preserve serial registries when a guided single-to-network entry is removed."""
     detected_net_id = departing.options.get(CONF_LAST_DETECTED_NET_ID)
@@ -293,7 +303,9 @@ def async_transfer_departing_entry(
     password = departing.data.get("password")
     candidates = [
         entry
-        for entry in hass.config_entries.async_entries(DOMAIN)
+        for entry in cast(
+            "list[SMABluetoothConfigEntry]", hass.config_entries.async_entries(DOMAIN)
+        )
         if entry.options.get(CONF_LAST_DETECTED_NET_ID) == detected_net_id
         and entry.options.get(CONF_PLANT_NAME, entry.data.get(CONF_PLANT_NAME))
         == plant_name

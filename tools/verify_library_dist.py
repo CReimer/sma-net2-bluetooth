@@ -33,6 +33,7 @@ def main() -> None:
         env = os.environ.copy()
         env.pop("PYTHONPATH", None)
         env.pop("PYTHONHOME", None)
+        env.pop("MYPYPATH", None)
         for index, artifact in enumerate(artifacts):
             venv = scratch / f"venv-{index}"
             subprocess.run(
@@ -47,6 +48,7 @@ def main() -> None:
                     "install",
                     str(artifact.resolve()),
                     "coverage==7.15.3",
+                    "mypy==2.4.0",
                 ],
                 check=True,
                 env=env,
@@ -56,7 +58,7 @@ def main() -> None:
                     python,
                     "-I",
                     "-c",
-                    "import importlib.util, importlib.metadata, json; import sma_net2; print(json.dumps({'path': sma_net2.__file__, 'version': importlib.metadata.version('sma-net2'), 'homeassistant': importlib.util.find_spec('homeassistant') is not None}))",
+                    "import importlib.util, importlib.metadata, json; import sma_net2; print(json.dumps({'path': sma_net2.__file__, 'version': importlib.metadata.version('sma-net2'), 'homeassistant': importlib.util.find_spec('homeassistant') is not None, 'typed': __import__('pathlib').Path(sma_net2.__file__).with_name('py.typed').is_file()}))",
                 ],
                 check=True,
                 capture_output=True,
@@ -65,10 +67,54 @@ def main() -> None:
                 env=env,
             )
             installed = json.loads(result.stdout)
-            if installed["homeassistant"] or not Path(installed["path"]).is_relative_to(
-                venv
+            if (
+                installed["homeassistant"]
+                or not installed["typed"]
+                or not Path(installed["path"]).is_relative_to(venv)
             ):
                 raise SystemExit(f"Artifact is not isolated: {installed}")
+            # Check installed modules, not the editable checkout, plus real callers.
+            type_command = [
+                python,
+                "-I",
+                "-m",
+                "mypy",
+                "--config-file",
+                str(PACKAGE / "pyproject.toml"),
+            ]
+            for targets in (
+                ["-p", "sma_net2"],
+                [str(PACKAGE / "typing_examples/usage.py")],
+            ):
+                subprocess.run(
+                    [*type_command, *targets],
+                    check=True,
+                    cwd=scratch,
+                    env=env,
+                )
+            invalid = scratch / "invalid_usage.py"
+            invalid.write_text(
+                'from sma_net2 import SMAClassicClient, SMAInverter\nclient = SMAClassicClient(123, object())\nbad: SMAInverter = 42\nasync def misuse() -> None:\n    await client.async_read_archive(["today"])\n'
+            )
+            rejected = subprocess.run(
+                [*type_command, str(invalid)],
+                capture_output=True,
+                text=True,
+                cwd=scratch,
+                env=env,
+                check=False,
+            )
+            if rejected.returncode != 1 or not all(
+                code in rejected.stdout
+                for code in ("[arg-type]", "[assignment]", "[list-item]")
+            ):
+                raise SystemExit(
+                    f"Installed API failed to reject invalid typed usage: {rejected.stdout} {rejected.stderr}"
+                )
+            print(
+                f"Strict installed API and negative consumer checks passed: {artifact.name}",
+                flush=True,
+            )
             subprocess.run(
                 [
                     python,

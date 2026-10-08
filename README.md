@@ -339,7 +339,7 @@ legacy entries, follow the Repairs instructions to preserve registry ownership.
 ## Quality scale status
 
 The implementation is being checked against the Home Assistant
-[Bronze, Silver and Gold checklist](https://developers.home-assistant.io/docs/core/integration-quality-scale/checklist/).
+[Bronze, Silver, Gold and Platinum checklist](https://developers.home-assistant.io/docs/core/integration-quality-scale/checklist/).
 See [quality_scale.yaml](custom_components/sma_bluetooth/quality_scale.yaml)
 for rule-by-rule evidence. This remains a **custom integration**; Core
 submission and an official quality-tier award are not intended. Local brand
@@ -351,7 +351,7 @@ is published separately on PyPI under GPL-3.0-or-later, with wheel and source
 archive. The integration pins that version in its manifest and the test suite
 uses the published package. Its source is in [packages/sma-net2](packages/sma-net2).
 The Home Assistant adapter uses Apache-2.0. The local audit records alignment
-with the applicable Bronze, Silver and Gold requirements; it is not an official Home Assistant
+with the applicable Bronze, Silver, Gold and Platinum requirements; it is not an official Home Assistant
 tier award.
 
 ## Data updates and discovery limitations
@@ -476,6 +476,16 @@ The separate library follows the same 96% per-module and overall line/branch
 gates, with standalone protocol, cancellation, discovery and safety tests.
 Both wheel and source archive are installed and checked without Home Assistant.
 Its [API documentation](packages/sma-net2/API.md) and
-[rule mapping](packages/sma-net2/QUALITY.md) record the same Bronze/Silver/Gold
+[rule mapping](packages/sma-net2/QUALITY.md) record the same Bronze/Silver/Gold/Platinum
 requirements, with explicit boundaries for frontend-only rules. Changes to the
 library require a new tested PyPI release before the integration pin changes.
+
+### Platinum typing and asynchronous transport
+
+CI runs pinned strict mypy across every integration and library runtime module.
+The standalone library ships PEP 561 typing and typed diagnostics; isolated
+wheel and sdist checks verify valid callers and rejection of invalid API usage.
+RFCOMM reads/writes are asynchronous, with an event-loop progress regression.
+Shared HTTP sessions are not applicable to this Bluetooth-only transport.
+Run `python -m mypy --config-file mypy.ini` and
+`python tools/check_library_types.py` locally.

@@ -9,13 +9,13 @@ from datetime import datetime, timedelta
 from typing import Any
 
 import voluptuous as vol
-from homeassistant.components.recorder import get_instance
 from homeassistant.components.recorder.models.statistics import (
     StatisticData,
     StatisticMeanType,
     StatisticMetaData,
 )
 from homeassistant.components.recorder.statistics import (
+    StatisticsRow,
     async_import_statistics,
     statistics_during_period,
 )
@@ -27,6 +27,7 @@ from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.event import async_track_sunset
+from homeassistant.helpers.recorder import get_instance
 from homeassistant.util import dt as dt_util
 from homeassistant.util.unit_conversion import EnergyConverter
 from sma_net2 import SMAProtocolError
@@ -159,6 +160,7 @@ async def _async_import_periods(
     before, after = await asyncio.gather(
         recorder.async_add_executor_job(
             statistics_during_period,
+            StatisticsRow,
             hass,
             first_hour - STATISTICS_ANCHOR_LOOKBACK,
             first_hour,
@@ -169,6 +171,7 @@ async def _async_import_periods(
         ),
         recorder.async_add_executor_job(
             statistics_during_period,
+            StatisticsRow,
             hass,
             end_hour,
             end_hour + STATISTICS_ANCHOR_LOOKBACK,
@@ -179,16 +182,16 @@ async def _async_import_periods(
         ),
     )
 
-    def anchor(rows: list[dict[str, Any]], *, last: bool) -> tuple[float, float] | None:
+    def anchor(rows: list[StatisticsRow], *, last: bool) -> tuple[float, float] | None:
         usable = [
-            row
+            (float(state), float(total))
             for row in rows
-            if row.get("state") is not None and row.get("sum") is not None
+            if (state := row.get("state")) is not None
+            and (total := row.get("sum")) is not None
         ]
         if not usable:
             return None
-        row = usable[-1] if last else usable[0]
-        return float(row["state"]), float(row["sum"])
+        return usable[-1] if last else usable[0]
 
     for entity_id, hourly in hourly_by_entity.items():
         states = [value for _, value in hourly]
@@ -325,7 +328,7 @@ async def async_setup(hass: HomeAssistant, config: dict[str, Any]) -> bool:
     async def async_import_archive(call: ServiceCall) -> dict[str, Any]:
         days = call.data[CONF_DAYS]
         requested_entry = call.data.get(CONF_CONFIG_ENTRY_ID)
-        entries = [
+        entries: list[SMABluetoothConfigEntry] = [
             entry
             for entry in hass.config_entries.async_entries(DOMAIN)
             if entry.state is ConfigEntryState.LOADED
@@ -407,7 +410,7 @@ async def async_setup(hass: HomeAssistant, config: dict[str, Any]) -> bool:
             )
 
         requested_entry = call.data.get(CONF_CONFIG_ENTRY_ID)
-        entries = [
+        entries: list[SMABluetoothConfigEntry] = [
             entry
             for entry in hass.config_entries.async_entries(DOMAIN)
             if entry.state is ConfigEntryState.LOADED

@@ -1,4 +1,4 @@
-# Standalone library mapping of the same Bronze/Silver/Gold checklist
+# Standalone library mapping of the same Bronze/Silver/Gold/Platinum checklist
 
 This is a local quality audit, not a Home Assistant tier award. The same
 engineering and documentation requirements apply to this package. Rules that
@@ -62,3 +62,15 @@ and source-fidelity tests run without HA on Python 3.11 and 3.14.
 | `reconfiguration-flow` | HA-specific: implemented and tested in the adapter audit. Library exposes typed models/exceptions and explicit lifecycle/configuration; it does not create HA flows, entities, registries, translations or Repairs. See API.md for the caller contract. |
 | `repair-issues` | HA-specific: implemented and tested in the adapter audit. Library exposes typed models/exceptions and explicit lifecycle/configuration; it does not create HA flows, entities, registries, translations or Repairs. See API.md for the caller contract. |
 | `stale-devices` | HA-specific: implemented and tested in the adapter audit. Library exposes typed models/exceptions and explicit lifecycle/configuration; it does not create HA flows, entities, registries, translations or Repairs. See API.md for the caller contract. |
+
+## Platinum
+
+| Rule | Library evidence |
+| --- | --- |
+| `async-dependency` | Nonblocking asyncio sockets and awaited dbus-fast operations; socketpair regression verifies event-loop progress while waiting for data. |
+| `inject-websession` | Exempt: Bluetooth Classic RFCOMM and local D-Bus use no HTTP session. |
+| `strict-typing` | All five runtime modules pass strict mypy 2.4.0 on supported Python versions. PEP 561 py.typed ships in wheel and sdist. Isolated installed-package checks type-check the public API and reject invalid callers. |
+
+Run `python tools/check_library_types.py` for source typing and
+`python tools/verify_library_dist.py --dist-dir library-dist` for installed
+artifact typing and runtime coverage gates.

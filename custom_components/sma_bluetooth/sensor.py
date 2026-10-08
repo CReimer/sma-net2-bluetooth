@@ -5,7 +5,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import Any
 
 from homeassistant.components.sensor import (
     SensorDeviceClass,
@@ -27,6 +26,7 @@ from homeassistant.const import (
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from sma_net2 import SMAInverter
 
 from .coordinator import SMABluetoothConfigEntry, SMABluetoothCoordinator
 from .device import hub_device_info
@@ -224,7 +224,7 @@ class SMASensor(SMAInverterEntity, SensorEntity):
         return super().available and not self.coordinator.sleeping
 
     @property
-    def native_value(self) -> Any:
+    def native_value(self) -> int | float | str | None:
         inverter = self.coordinator.data.get(self._serial)
         return inverter.values.get(self.entity_description.key) if inverter else None
 
@@ -366,7 +366,7 @@ class SMAInverterDiagnosticSensor(SMAInverterEntity, SensorEntity):
     def __init__(self, coordinator: SMABluetoothCoordinator, serial: str) -> None:
         super().__init__(coordinator, serial)
 
-    def _inverter(self):
+    def _inverter(self) -> SMAInverter | None:
         return self.coordinator.data.get(self._serial)
 
 

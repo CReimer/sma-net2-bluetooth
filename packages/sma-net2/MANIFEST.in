@@ -5,3 +5,4 @@ include RELEASING.md
 include LICENSE
 recursive-include src *.py py.typed
 recursive-include tests *.py
+recursive-include typing_examples *.py

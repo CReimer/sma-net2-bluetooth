@@ -3,7 +3,8 @@
 
 from __future__ import annotations
 
-from homeassistant.config_entries import ConfigEntry
+from typing import TYPE_CHECKING
+
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.device_registry import DeviceInfo
@@ -11,13 +12,16 @@ from homeassistant.helpers.device_registry import DeviceInfo
 from .const import CONF_PLANT_NAME, DOMAIN, HUB_IDENTIFIER_PREFIX
 from .coordinator import SMABluetoothCoordinator
 
+if TYPE_CHECKING:
+    from .coordinator import SMABluetoothConfigEntry
 
-def hub_identifier(entry: ConfigEntry) -> tuple[str, str]:
+
+def hub_identifier(entry: SMABluetoothConfigEntry) -> tuple[str, str]:
     """Return the stable logical connection hub identifier."""
     return (DOMAIN, f"{HUB_IDENTIFIER_PREFIX}{entry.entry_id}")
 
 
-def hub_device_info(entry: ConfigEntry) -> DeviceInfo:
+def hub_device_info(entry: SMABluetoothConfigEntry) -> DeviceInfo:
     """Describe the stable Home Assistant SMA-Net2 connection hub."""
     plant_name = entry.options.get(
         CONF_PLANT_NAME, entry.data.get(CONF_PLANT_NAME, entry.title)
@@ -30,7 +34,9 @@ def hub_device_info(entry: ConfigEntry) -> DeviceInfo:
     )
 
 
-def async_ensure_hub_device(hass: HomeAssistant, entry: ConfigEntry) -> None:
+def async_ensure_hub_device(
+    hass: HomeAssistant, entry: SMABluetoothConfigEntry
+) -> None:
     """Create the hub before any inverter platform resolves its via link."""
     info = hub_device_info(entry)
     dr.async_get(hass).async_get_or_create(
