@@ -1,9 +1,10 @@
 # License and attribution
 
-The independently authored Home Assistant adapter Python files marked
-`SPDX-License-Identifier: Apache-2.0` are licensed under the Apache License,
-Version 2.0, matching Home Assistant Core. The complete text is in
-[`LICENSES/Apache-2.0.txt`](../../LICENSES/Apache-2.0.txt).
+The independently authored Home Assistant adapter source code and configuration
+in this directory are licensed under the Apache License, Version 2.0, matching
+Home Assistant Core. Python files also carry `SPDX-License-Identifier: Apache-2.0`.
+The complete text is in [`LICENSE`](LICENSE). Brand artwork is excluded; see
+[`brand/README.md`](brand/README.md).
 
 The device communication implementation is distributed separately in the
 `sma-net2` package under `GPL-3.0-or-later`. Its source and full license text

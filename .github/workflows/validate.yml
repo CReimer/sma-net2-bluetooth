@@ -39,9 +39,6 @@ jobs:
         with:
           python-version: "3.14"
       - run: python -m pip install -r requirements-test.txt
-      # Verify the pending library release as an installed wheel, not source-path imports.
-      - run: python -m pip wheel --no-deps packages/sma-net2 -w library-dist
-      - run: python -m pip install library-dist/sma_net2-*.whl
       - run: python tools/run_tests.py
       - name: Upload coverage reports
         if: always()

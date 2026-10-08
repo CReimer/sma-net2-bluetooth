@@ -99,8 +99,6 @@ Run the tests against the pinned Home Assistant release:
 
 ```bash
 python -m pip install -r requirements-test.txt
-python -m pip wheel --no-deps packages/sma-net2 -w library-dist
-python -m pip install library-dist/sma_net2-*.whl
 python tools/run_tests.py
 ```
 
@@ -110,8 +108,8 @@ maintainer.
 
 ## License and attribution
 
-The independently authored Home Assistant adapter Python files marked
-`SPDX-License-Identifier: Apache-2.0` use [Apache-2.0](LICENSES/Apache-2.0.txt),
+The independently authored Home Assistant adapter source code and configuration
+use [Apache-2.0](custom_components/sma_bluetooth/LICENSE),
 matching Home Assistant Core. See the explicit
 [component license boundary](custom_components/sma_bluetooth/LICENSE.md).
 
@@ -142,8 +140,6 @@ Use Python 3.14 and the pinned Home Assistant test dependencies:
 
 ```bash
 python -m pip install -r requirements-test.txt
-python -m pip wheel --no-deps packages/sma-net2 -w library-dist
-python -m pip install library-dist/sma_net2-*.whl
 python tools/run_tests.py
 ```
 
@@ -292,17 +288,10 @@ submission and an official quality-tier award are not intended. Local brand
 assets are supplied for modern Home Assistant, so no upstream brands
 submission is required for this project.
 
-The communication library [packages/sma-net2](packages/sma-net2)
-provides the independent client, tests and release pipeline. The integration
-now pins `sma-net2==0.1.0` and imports its API. **This branch must not be released
-until that version is published on PyPI.** Publication and verification against
-the published artifact remain outstanding.
-
-For development before publication, install the package wheel before running
-the integration tests:
-
-```bash
-python -m pip wheel --no-deps packages/sma-net2 -w library-dist
-python -m pip install library-dist/sma_net2-*.whl
-python tools/run_tests.py
-```
+The communication library [sma-net2 0.1.0](https://pypi.org/project/sma-net2/0.1.0/)
+is published separately on PyPI under GPL-3.0-or-later, with wheel and source
+archive. The integration pins that version in its manifest and the test suite
+uses the published package. Its source is in [packages/sma-net2](packages/sma-net2).
+The Home Assistant adapter uses Apache-2.0. The local audit records alignment
+with the applicable Bronze requirements; it is not an official Home Assistant
+tier award.
