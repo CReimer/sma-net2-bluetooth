@@ -9,7 +9,7 @@ rules:
     comment: coordinator.py uses a configurable interval (default/minimum 60 seconds) and daylight.py defers overnight polling until sunrise.
   brands:
     status: todo
-    comment: Local brand/ PNG assets exist for Home Assistant 2026.3+. Official grading still requires an accepted sma_bluetooth entry in home-assistant/brands.
+    comment: Local brand/ PNG assets exist for Home Assistant 2026.3+. contributions/brands contains a verified patch reusing the existing SMA assets via a core integration symlink. Personal contributor review, submission alongside the Core PR, and upstream acceptance remain pending.
   common-modules:
     status: done
     comment: Shared update logic is in coordinator.py, entity lifecycle and inverter identity in entity.py, and device metadata in device.py.
