@@ -1,13 +1,13 @@
 # Release setup
 
-The library is not yet published. Its first release needs a PyPI project owner;
-the maintainer currently has no PyPI account. Builds and local verification do
-not require a PyPI account, token or credentials.
+The library is not yet published. The designated PyPI project owner is
+`C-Reimer`. The pending GitHub publisher still needs to be configured.
+Builds and local verification do not require a PyPI account, token or credentials.
 
 ## One-time account and publisher setup
 
-1. Create an account at https://pypi.org/account/register/, verify the email
-   address, and configure the authentication required by PyPI.
+1. Sign in to `C-Reimer` at https://pypi.org/ and complete any outstanding
+   email verification and authentication required by PyPI.
 2. On https://pypi.org/manage/account/publishing/, add a **pending publisher**
    for a new project with these exact values:
 
