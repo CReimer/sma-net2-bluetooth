@@ -39,6 +39,8 @@ jobs:
         with:
           python-version: "3.14"
       - run: python -m pip install -r requirements-test.txt
+      - name: Strict typing (all integration modules)
+        run: python -m mypy --config-file mypy.ini
       - run: python tools/run_tests.py
       - name: Upload coverage reports
         if: always()

@@ -1,6 +1,23 @@
 # Release setup
 
-## Current release: 0.1.1
+## Current release: 0.1.2
+
+Published at https://pypi.org/project/sma-net2/0.1.2/ through Trusted Publishing.
+Tag `sma-net2-v0.1.2` points to `3547e76f242ef70f8d687e247130620fed63f456`.
+Publish/test run: https://github.com/CReimer/sma-net2-bluetooth/actions/runs/37757033154.
+
+Published wheel and sdist were downloaded from PyPI and matched the tested CI
+artifacts byte for byte. Both pass isolated strict source/API typing, rejection
+of invalid callers, and all 42 runtime tests without Home Assistant installed.
+Coverage: 692/693 lines (99.86%), 248/254 branches (97.64%), with separate
+96% floors overall and per module. Python 3.11 and 3.14 source checks pass.
+
+- Wheel SHA256: `a74b8dd972a751b7860607fee0c9e52525a2bba1f5579a2fe2b7d2c7b1d691e7`
+- Sdist SHA256: `fb7a8cb17a18a4fcfc90c4a7439a914ff93d9315a35bdf24f8129178d5771275`
+
+Integration 0.3.1 pins the published `sma-net2==0.1.2` package.
+
+## Previous release: 0.1.1
 
 Published at https://pypi.org/project/sma-net2/0.1.1/ by the existing Trusted
 Publisher. Release tag `sma-net2-v0.1.1` points to

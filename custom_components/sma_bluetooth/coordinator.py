@@ -5,8 +5,8 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from collections.abc import Awaitable, Callable
-from datetime import timedelta
+from collections.abc import Awaitable, Callable, Sequence
+from datetime import datetime, timedelta
 from typing import TypeVar
 
 from homeassistant.config_entries import ConfigEntry
@@ -133,9 +133,9 @@ class SMABluetoothCoordinator(DataUpdateCoordinator[dict[str, SMAInverter]]):
             config_entry=entry,
         )
         self.entry = entry
-        self.address = entry.data["bt_address"]
-        self.password = entry.data["password"]
-        self.connection_mode = entry.data.get(
+        self.address: str = entry.data["bt_address"]
+        self.password: str = entry.data["password"]
+        self.connection_mode: str = entry.data.get(
             CONF_CONNECTION_MODE, DEFAULT_CONNECTION_MODE
         )
         self.configured_net_id = entry.data.get(CONF_NET_ID)
@@ -158,7 +158,7 @@ class SMABluetoothCoordinator(DataUpdateCoordinator[dict[str, SMAInverter]]):
         self.owned_serials = set(self._known_inverters)
         self.archive_reconcile_task: asyncio.Task[None] | None = None
         self.archive_listener_remove: Callable[[], None] | None = None
-        self.archive_last_attempt = None
+        self.archive_last_attempt: datetime | None = None
 
     def _night_data(self, schedule: DaylightSchedule) -> dict[str, SMAInverter]:
         """Preserve a connection failure until a real daytime poll succeeds."""
@@ -253,7 +253,7 @@ class SMABluetoothCoordinator(DataUpdateCoordinator[dict[str, SMAInverter]]):
             }
             for inverter in self.data.values():
                 inverter.network_role = address_roles.get(
-                    inverter.bluetooth_address, inverter.network_role
+                    inverter.bluetooth_address or "", inverter.network_role
                 )
 
         detected_serials = {str(device.serial) for device in client.devices}
@@ -351,12 +351,13 @@ class SMABluetoothCoordinator(DataUpdateCoordinator[dict[str, SMAInverter]]):
             self.async_update_listeners()
 
     async def async_read_archive(
-        self, periods: list[int | tuple[int, int]]
+        self, periods: Sequence[int | tuple[int, int]]
     ) -> dict[str, list[SMAArchivePoint]]:
         """Read archive data through a dedicated adapter-wide session."""
         timeout = UPDATE_TIMEOUT + len(periods) * 15
         result = await self.async_run_session(
-            lambda client: client.async_read_archive_active(periods), timeout=timeout
+            lambda client: client.async_read_archive_active(list(periods)),
+            timeout=timeout,
         )
         self.async_update_listeners()
         return result

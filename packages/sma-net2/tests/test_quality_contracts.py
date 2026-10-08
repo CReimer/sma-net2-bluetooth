@@ -252,3 +252,24 @@ class QualityContracts(unittest.IsolatedAsyncioTestCase):
         ):
             await client.__aenter__()
         self.assertIsNone(client.sock)
+
+    async def test_pending_socket_io_keeps_event_loop_responsive(self):
+        client = p.SMAClassicClient("AA:BB:CC:DD:EE:FF", "secret")
+        left, right = p.socket.socketpair()
+        left.setblocking(False)
+        right.setblocking(False)
+        client.sock = left
+        task = asyncio.create_task(client._recv_exact(3))
+        try:
+            await asyncio.sleep(0)
+            self.assertFalse(task.done())
+            await asyncio.get_running_loop().sock_sendall(right, b"abc")
+            self.assertEqual(await asyncio.wait_for(task, 1), b"abc")
+            await client._send(b"def")
+            self.assertEqual(
+                await asyncio.get_running_loop().sock_recv(right, 3), b"def"
+            )
+        finally:
+            task.cancel()
+            await client.__aexit__()
+            right.close()

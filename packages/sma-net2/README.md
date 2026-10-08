@@ -23,7 +23,7 @@ measurement sets. This project is not affiliated with or endorsed by SMA.
 Install a published release from PyPI:
 
 ```sh
-python -m pip install sma-net2==0.1.1
+python -m pip install sma-net2==0.1.2
 ```
 
 ## Development installation
@@ -114,7 +114,7 @@ OSI-licensed `dbus-fast` package.
 See [API.md](https://github.com/CReimer/sma-net2-bluetooth/blob/main/packages/sma-net2/API.md) for every public method, parameter/default, return model,
 measurement/unit, error class, cancellation/cleanup guarantee, diagnostics,
 use case, limitation, troubleshooting step and removal procedure.
-[QUALITY.md](https://github.com/CReimer/sma-net2-bluetooth/blob/main/packages/sma-net2/QUALITY.md) maps the same Bronze/Silver/Gold requirements used for
+[QUALITY.md](https://github.com/CReimer/sma-net2-bluetooth/blob/main/packages/sma-net2/QUALITY.md) maps the same Bronze/Silver/Gold/Platinum requirements used for
 the HA adapter, including explicit frontend-only boundaries. Both use >=96%
 line and branch coverage per runtime module and overall. Wheel and sdist must
 pass these gates separately in environments without Home Assistant.
@@ -123,3 +123,7 @@ Version 0.1.1 adds privacy-safe `client.diagnostics()`, bounds socket sends by
 the configured timeout, wraps socket errors consistently and closes cancelled
 connections. It also stops already-started discovery on partial adapter failure.
 The tests cover these lifecycle and error contracts without radio access.
+
+Version 0.1.2 completes strict typing of all runtime modules and typed public
+diagnostics. CI validates installed wheel/sdist typing and asynchronous
+transport progress, in addition to the same runtime coverage gates.

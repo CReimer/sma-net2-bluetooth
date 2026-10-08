@@ -159,3 +159,11 @@ branches separately per module and overall, using unrounded counts. Build with
 `python -m build packages/sma-net2`; then `python tools/verify_library_dist.py`
 installs wheel and sdist separately without HA and runs the same tests and gates
 against each installed artifact. CI runs Python 3.11 and 3.14 before publishing.
+
+## Static typing
+
+The package includes a PEP 561 `py.typed` marker. All runtime modules pass
+strict mypy. `MeasurementValue` is `int | float | str | None`; diagnostics use
+`SMAClientDiagnostics` and `SMAInverterDiagnostics` TypedDict contracts. Archive
+periods accept `Sequence[int | tuple[int, int]]`. See `typing_examples/usage.py` for
+a checked public-API consumer. CI checks both source and installed artifacts.
