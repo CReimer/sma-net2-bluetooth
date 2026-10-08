@@ -1,0 +1,50 @@
+[build-system]
+requires = ["setuptools>=77.0.3"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sma-net2"
+version = "0.1.0"
+description = "Async SMA-Net2 Bluetooth Classic inverter protocol client"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "GPL-3.0-or-later"
+license-files = ["LICENSE"]
+authors = [{name = "sma-net2-bluetooth contributors"}]
+keywords = ["sma", "solar", "inverter", "bluetooth", "net2", "asyncio"]
+dependencies = ["dbus-fast>=5.0.22"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Framework :: AsyncIO",
+  "Operating System :: POSIX :: Linux",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Topic :: Home Automation",
+  "Typing :: Typed",
+]
+
+[project.urls]
+Homepage = "https://github.com/CReimer/sma-net2-bluetooth"
+Source = "https://github.com/CReimer/sma-net2-bluetooth/tree/main/packages/sma-net2"
+Issues = "https://github.com/CReimer/sma-net2-bluetooth/issues"
+
+[project.optional-dependencies]
+test = ["coverage==7.15.3"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+sma_net2 = ["py.typed"]
+
+[tool.coverage.run]
+branch = true
+source = ["sma_net2"]
+
+[tool.coverage.report]
+show_missing = true
+precision = 2
+fail_under = 91

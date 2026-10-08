@@ -1,5 +1,5 @@
 # Local Bronze audit. This custom integration has no official Home Assistant tier.
-# The upstream brands requirement and core review are still outstanding.
+# Publishing/consuming the communication library, upstream brands and core review remain outstanding.
 rules:
   action-setup:
     status: done
@@ -20,8 +20,8 @@ rules:
     status: done
     comment: User and reconfigure flows have field descriptions and a masked password selector; connection data and options are separated with v2.1 migration.
   dependency-transparency:
-    status: exempt
-    comment: No additional external Python requirements; the integration uses the Python standard library and Home Assistant dependencies.
+    status: todo
+    comment: packages/sma-net2 prepares the standalone GPL-3.0-or-later protocol/discovery library and public build/publish CI. Publication to PyPI and switching the integration to the released requirement are pending. Core does not permit inline protocol implementations.
   docs-actions:
     status: done
     comment: README describes get_archive and import_archive fields, bounds, responses, side effects and examples.

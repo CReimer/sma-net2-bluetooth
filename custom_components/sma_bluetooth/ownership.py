@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """Serial ownership, registry continuity, and Repairs issues for SMA Bluetooth."""
 
 from __future__ import annotations

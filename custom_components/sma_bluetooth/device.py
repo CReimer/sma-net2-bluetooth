@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """Stable Home Assistant device identities for SMA Bluetooth."""
 
 from __future__ import annotations

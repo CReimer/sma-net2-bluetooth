@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """Helpers for reconciling SMA archive data with Home Assistant statistics."""
 
 from __future__ import annotations
