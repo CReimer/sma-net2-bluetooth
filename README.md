@@ -346,7 +346,7 @@ submission and an official quality-tier award are not intended. Local brand
 assets are supplied for modern Home Assistant, so no upstream brands
 submission is required for this project.
 
-The communication library [sma-net2 0.1.0](https://pypi.org/project/sma-net2/0.1.0/)
+The communication library [sma-net2 0.1.1](https://pypi.org/project/sma-net2/0.1.1/)
 is published separately on PyPI under GPL-3.0-or-later, with wheel and source
 archive. The integration pins that version in its manifest and the test suite
 uses the published package. Its source is in [packages/sma-net2](packages/sma-net2).

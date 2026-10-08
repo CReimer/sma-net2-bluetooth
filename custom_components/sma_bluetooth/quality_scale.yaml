@@ -22,7 +22,7 @@ rules:
     comment: User and reconfigure flows have field descriptions and a masked password selector; connection data and options are separated with v2.1 migration.
   dependency-transparency:
     status: done
-    comment: Device communication uses the separate open-source GPL-3.0-or-later sma-net2==0.1.0 package published on PyPI with wheel, sdist, public source and issue tracker. No protocol/discovery implementation remains in the integration. CI installs the published pinned release; both published artifacts were tested in isolated environments without Home Assistant.
+    comment: Device communication uses the separate open-source GPL-3.0-or-later sma-net2==0.1.1 package published on PyPI with wheel, sdist, public source and issue tracker. No protocol/discovery implementation remains in the integration. CI installs the published pinned release; both published artifacts were tested in isolated environments without Home Assistant.
   docs-actions:
     status: done
     comment: README describes get_archive and import_archive fields, bounds, responses, side effects and examples.

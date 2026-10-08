@@ -1,5 +1,26 @@
 # Release setup
 
+## Current release: 0.1.1
+
+Published at https://pypi.org/project/sma-net2/0.1.1/ by the existing Trusted
+Publisher. Release tag `sma-net2-v0.1.1` points to
+`f6948720e525e646cfa92b4d69e345238d345eea`; successful publish workflow:
+https://github.com/CReimer/sma-net2-bluetooth/actions/runs/37754044993.
+
+The workflow runs 41 standalone tests on Python 3.11 and 3.14 and enforces the
+same >=96% lines and branches separately for every runtime module and overall.
+Both isolated wheel and sdist installations pass the same gates without HA:
+99.85% lines (674/675), 97.64% branches (248/254). PyPI downloads matched the
+tested release artifacts byte-for-byte and were verified again in isolation.
+
+- Wheel SHA256: `054dccb892564b8a178a9cf1923c94601db76098d770bcf2bea725d016d08869`
+- Source SHA256: `6435205ddcc047b55c87b714c0259f50f0021bbc028970e4fbf52ad04cb82a56`
+
+The integration pins `sma-net2==0.1.1`. The initial-release record below is
+retained as history; subsequent releases must always get a new version/tag.
+
+## Initial release: 0.1.0
+
 Version `0.1.0` is published at https://pypi.org/project/sma-net2/0.1.0/.
 The PyPI project owner is `C-Reimer`. GitHub Trusted Publishing uses the
 publisher below; no API token is needed. The initial release tag is
@@ -66,14 +87,14 @@ subsequent releases.
 ## Integration dependency
 
 The custom integration imports the library API and shared constants and pins
-`sma-net2==0.1.0` in its manifest. The bundled protocol/models/discovery modules
+`sma-net2==0.1.1` in its manifest. The bundled protocol/models/discovery modules
 have been removed. Home Assistant scheduling, adapter recovery, ownership,
 Recorder conversion and entity code remain in the integration. Integration CI
 installs the published pinned package through `requirements-test.txt`.
 
 For subsequent library versions, publish and verify the new version before
 updating the integration manifest and test dependency. Run the full integration
-suite and retain 100% config-flow coverage and the existing overall gates.
+suite and retain 100% config-flow coverage and the same per-module and overall gates.
 This project remains a custom integration; no Core or brands submission is
 intended. The local Bronze audit does not award an official Home Assistant tier.
 The protocol remains GPL-3.0-or-later with its original attribution.
