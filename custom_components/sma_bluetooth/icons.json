@@ -1,0 +1,38 @@
+{
+  "entity": {
+    "sensor": {
+      "status": {
+        "default": "mdi:solar-power"
+      },
+      "relay_status": {
+        "default": "mdi:electric-switch"
+      },
+      "bt_signal": {
+        "default": "mdi:bluetooth"
+      },
+      "plant_clock_difference": {
+        "default": "mdi:clock-alert-outline"
+      },
+      "connection_mode": {
+        "default": "mdi:bluetooth-connect"
+      },
+      "net_id": {
+        "default": "mdi:identifier"
+      },
+      "root_node": {
+        "default": "mdi:lan"
+      },
+      "network_role": {
+        "default": "mdi:lan-connect"
+      },
+      "record_clock_difference": {
+        "default": "mdi:clock-alert-outline"
+      }
+    },
+    "event": {
+      "events": {
+        "default": "mdi:solar-power"
+      }
+    }
+  }
+}

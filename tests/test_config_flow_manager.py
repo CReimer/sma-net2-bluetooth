@@ -421,3 +421,26 @@ class ConfigFlowManagerTests(unittest.IsolatedAsyncioTestCase):
                     ):
                         self.assertTrue(strings[prefix + key])
                         self.assertNotIn("[%key", strings[prefix + key])
+
+                    entities = await translation.async_get_translations(
+                        self.hass, language, "entity", {DOMAIN}
+                    )
+                    for key in (
+                        "sensor.ac_power_total.name",
+                        "sensor.connection_mode.name",
+                        "event.events.name",
+                        "event.events.state_attributes.event_type.state.fault",
+                    ):
+                        self.assertTrue(entities[f"component.{DOMAIN}.entity.{key}"])
+                    exceptions = await translation.async_get_translations(
+                        self.hass, language, "exceptions", {DOMAIN}
+                    )
+                    for key in (
+                        "archive_read",
+                        "invalid_auth",
+                        "poll_failed",
+                        "archive_alignment",
+                    ):
+                        self.assertTrue(
+                            exceptions[f"component.{DOMAIN}.exceptions.{key}.message"]
+                        )

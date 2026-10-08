@@ -280,22 +280,45 @@ class SMAClassicClient:
             return self.format_bluetooth_address(self.root_address)
         return None
 
+    def diagnostics(self) -> dict[str, object]:
+        """Return a serializable session summary without credentials or identifiers."""
+        return {
+            "configured_mode": self.connection_mode,
+            "effective_mode": self.effective_mode,
+            "net_id": self.net_id,
+            "transport_open": self.sock is not None,
+            "session_active": self._session_active,
+            "inverter_count": len(self.devices),
+            "inverters": [
+                {
+                    "model": device.inverter.model,
+                    "software_version": device.inverter.software_version,
+                    "available_values": sorted(device.inverter.values),
+                }
+                for device in self.devices
+                if device.inverter is not None
+            ],
+        }
+
     async def __aenter__(self) -> Self:
         if not hasattr(socket, "AF_BLUETOOTH"):
             raise SMAProtocolError("Python has no Bluetooth socket support")
-        self.sock = socket.socket(
-            socket.AF_BLUETOOTH, socket.SOCK_STREAM, socket.BTPROTO_RFCOMM
-        )
-        self.sock.setblocking(False)
         try:
+            self.sock = socket.socket(
+                socket.AF_BLUETOOTH, socket.SOCK_STREAM, socket.BTPROTO_RFCOMM
+            )
+            self.sock.setblocking(False)
             await asyncio.wait_for(
                 asyncio.get_running_loop().sock_connect(self.sock, (self.address, 1)),
                 self.timeout,
             )
-        except (OSError, TimeoutError) as err:
-            self.sock.close()
-            self.sock = None
-            raise SMATransportError(f"RFCOMM connection failed: {err}") from err
+        except BaseException as err:
+            if self.sock is not None:
+                self.sock.close()
+                self.sock = None
+            if isinstance(err, (OSError, TimeoutError)):
+                raise SMATransportError(f"RFCOMM connection failed: {err}") from err
+            raise
         return self
 
     async def __aexit__(self, *_: object) -> None:
@@ -318,6 +341,8 @@ class SMAClassicClient:
                 )
             except TimeoutError as err:
                 raise SMATransportError("Timeout receiving SMA packet") from err
+            except OSError as err:
+                raise SMATransportError("RFCOMM receive failed") from err
             if not chunk:
                 raise SMATransportError("SMA closed the RFCOMM connection")
             result.extend(chunk)
@@ -326,7 +351,12 @@ class SMAClassicClient:
     async def _send(self, packet: bytes) -> None:
         if self.sock is None:
             raise SMAProtocolError("RFCOMM socket is not connected")
-        await asyncio.get_running_loop().sock_sendall(self.sock, packet)
+        try:
+            await asyncio.wait_for(
+                asyncio.get_running_loop().sock_sendall(self.sock, packet), self.timeout
+            )
+        except (OSError, TimeoutError) as err:
+            raise SMATransportError("RFCOMM send failed") from err
 
     def _l1(self, control: int, destination: bytes, payload: bytes = b"") -> bytes:
         packet = bytearray(b"\x7e\0\0\0")

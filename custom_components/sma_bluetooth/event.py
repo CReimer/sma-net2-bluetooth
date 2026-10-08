@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 from homeassistant.components.event import EventEntity
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .coordinator import SMABluetoothConfigEntry, SMABluetoothCoordinator
@@ -33,10 +33,18 @@ async def async_setup_entry(
 ) -> None:
     """Set up one event entity per inverter."""
     coordinator: SMABluetoothCoordinator = entry.runtime_data
-    async_add_entities(
-        SMAInverterEvent(coordinator, serial)
-        for serial in sorted(set(coordinator.data) & coordinator.owned_serials)
-    )
+    known: set[str] = set()
+
+    @callback
+    def add_new_entities() -> None:
+        serials = (set(coordinator.data) & coordinator.owned_serials) - known
+        known.update(serials)
+        async_add_entities(
+            [SMAInverterEvent(coordinator, serial) for serial in sorted(serials)]
+        )
+
+    add_new_entities()
+    entry.async_on_unload(coordinator.async_add_listener(add_new_entities))
 
 
 class SMAInverterEvent(SMAInverterEntity, EventEntity):
@@ -44,7 +52,7 @@ class SMAInverterEvent(SMAInverterEntity, EventEntity):
 
     _attr_event_types = EVENT_TYPES
     _attr_has_entity_name = True
-    _attr_name = "Events"
+    _attr_translation_key = "events"
 
     def __init__(self, coordinator: SMABluetoothCoordinator, serial: str) -> None:
         super().__init__(coordinator, serial)

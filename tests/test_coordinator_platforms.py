@@ -46,6 +46,7 @@ def make_coordinator():
         data={"bt_address": "AA", "password": "p"},
         options={},
         minor_version=1,
+        async_on_unload=Mock(),
         state=ConfigEntryState.LOADED,
     )
 
@@ -65,6 +66,7 @@ def make_coordinator():
         )
     }
     coordinator.owned_serials = {"1"}
+    coordinator.async_add_listener = Mock(return_value=Mock())
     coordinator.last_update_success = True
     coordinator.update_interval = timedelta(seconds=60)
     entry.runtime_data = coordinator
@@ -315,7 +317,7 @@ class PlatformTests(unittest.IsolatedAsyncioTestCase):
                     co.hass, co.entry
                 )
                 self.assertNotEqual(result["config_entry"]["password"], "p")
-                self.assertEqual(result["inverters"]["1"]["entity_owner"], True)
+                self.assertEqual(result["inverters"]["inverter_1"]["entity_owner"], True)
                 self.assertEqual(
                     result["connection"]["last_adapter_recovery_at"],
                     recovered.isoformat() if recovered else None,

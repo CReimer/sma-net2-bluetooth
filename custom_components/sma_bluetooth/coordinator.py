@@ -165,7 +165,11 @@ class SMABluetoothCoordinator(DataUpdateCoordinator[dict[str, SMAInverter]]):
         self.sleeping = True
         self.update_interval = schedule.next_interval
         if not self.last_update_success:
-            raise UpdateFailed("SMA polling paused until sunrise after a failed update")
+            raise UpdateFailed(
+                "SMA polling paused until sunrise after a failed update",
+                translation_domain=DOMAIN,
+                translation_key="night_pause",
+            )
         return self.data or self._known_inverters
 
     async def _async_update_data(self) -> dict[str, SMAInverter]:
@@ -182,17 +186,25 @@ class SMABluetoothCoordinator(DataUpdateCoordinator[dict[str, SMAInverter]]):
         except SMADaylightError:
             return self._night_data(daylight_schedule(self.hass))
         except SMAAuthenticationError as err:
-            raise ConfigEntryAuthFailed(str(err)) from err
+            raise ConfigEntryAuthFailed(
+                str(err), translation_domain=DOMAIN, translation_key="invalid_auth"
+            ) from err
         except SMANetworkModeError as err:
             self.net_id = err.net_id
             async_note_netid_change(
                 self.hass, self.entry, err.net_id, self._known_inverters
             )
-            raise ConfigEntryError(str(err)) from err
+            raise ConfigEntryError(
+                str(err), translation_domain=DOMAIN, translation_key="invalid_topology"
+            ) from err
         except SMAConfigurationError as err:
-            raise ConfigEntryError(str(err)) from err
+            raise ConfigEntryError(
+                str(err), translation_domain=DOMAIN, translation_key="invalid_topology"
+            ) from err
         except SMAProtocolError as err:
-            raise UpdateFailed(str(err)) from err
+            raise UpdateFailed(
+                str(err), translation_domain=DOMAIN, translation_key="poll_failed"
+            ) from err
 
         self._remember_inverters(data)
         self.owned_serials = async_reconcile_ownership(self.hass, self.entry, data)

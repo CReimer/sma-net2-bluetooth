@@ -88,7 +88,7 @@ recovery fails.
 
 ## Privacy and bug reports
 
-Diagnostics redact the SMA password. Before posting diagnostics or logs, also
+Diagnostics redact passwords, configured plant names, selected serials and Bluetooth addresses. Inverter keys are anonymous ordinals. Before posting diagnostics or logs, also
 review Bluetooth addresses, inverter serial numbers, plant names and topology
 information. Never include passwords or unrelated Home Assistant configuration
 in a public issue.
@@ -339,7 +339,7 @@ legacy entries, follow the Repairs instructions to preserve registry ownership.
 ## Quality scale status
 
 The implementation is being checked against the Home Assistant
-[Bronze and Silver checklist](https://developers.home-assistant.io/docs/core/integration-quality-scale/checklist/).
+[Bronze, Silver and Gold checklist](https://developers.home-assistant.io/docs/core/integration-quality-scale/checklist/).
 See [quality_scale.yaml](custom_components/sma_bluetooth/quality_scale.yaml)
 for rule-by-rule evidence. This remains a **custom integration**; Core
 submission and an official quality-tier award are not intended. Local brand
@@ -351,5 +351,131 @@ is published separately on PyPI under GPL-3.0-or-later, with wheel and source
 archive. The integration pins that version in its manifest and the test suite
 uses the published package. Its source is in [packages/sma-net2](packages/sma-net2).
 The Home Assistant adapter uses Apache-2.0. The local audit records alignment
-with the applicable Bronze and Silver requirements; it is not an official Home Assistant
+with the applicable Bronze, Silver and Gold requirements; it is not an official Home Assistant
 tier award.
+
+## Data updates and discovery limitations
+
+Measurements are polled locally every 60 seconds by default. Reconfigure can
+increase that interval; 60 seconds is the minimum. At sunset, live entities
+become unavailable and polling waits for the next sunrise at Home Assistant's
+configured location. Every operation opens a fresh authenticated RFCOMM
+session and releases it, serialized across entries sharing the adapter.
+After a successful poll, newly owned inverters and newly returned measurement
+keys are added without reloading. Missing measurements stay unknown. Source
+counter decreases and source timestamps are preserved rather than corrected.
+The first successful daylight poll each day also schedules the previous-day
+archive reconciliation and a guarded plant-clock check described above.
+
+Home Assistant's automatic Bluetooth discovery processes BLE advertisements.
+SMA-Net2 uses Bluetooth Classic inquiry and RFCOMM; it has no such advertisement
+or IP discovery endpoint. It therefore cannot produce a native HA discovery
+card. **Add integration** performs an active local BlueZ Classic search instead;
+if that fails, enter the inverter's address manually. These fixed hardware
+addresses do not rotate like BLE addresses. A different selected inverter must
+be verified through **Reconfigure**, never silently substituted. This is the
+technical exemption recorded for the two automatic discovery checklist rules.
+See Home Assistant's [Bluetooth API](https://developers.home-assistant.io/docs/bluetooth/).
+
+## Supported functions and defaults
+
+The integration creates only measurements actually reported by the inverter.
+Model support does not imply that every model reports every value below.
+
+| Function | Unit / behavior | Default |
+| --- | --- | --- |
+| AC total power | W, instantaneous | Enabled |
+| Energy today / total | kWh, total increasing | Enabled |
+| Temperature | °C | Enabled |
+| Status / relay status | Raw SMA status text; unknown numeric tags remain visible | Enabled |
+| Grid frequency | Hz | Enabled |
+| Operating time / feed-in time | h; operating time permits source rollbacks | Enabled |
+| DC total power | W, sum of available MPPT power values | Enabled |
+| DC power / voltage / current, MPPT 1–2 | W / V / A | Enabled |
+| AC power / voltage / current, phases 1–3 | W / V / A | Enabled |
+| Bluetooth signal | %, diagnostic; not dBm | Disabled |
+| Connection mode / NetID / current root | Entry hub diagnostics | Disabled |
+| Network role | Inverter diagnostic: direct, root_node, participant | Disabled |
+| Record timestamp / record clock difference | UTC timestamp / signed seconds at receipt | Disabled |
+| Plant clock difference at check | Signed seconds, with check/synchronization timestamps | Disabled |
+| Events | Observed warning, fault and relay transitions | Enabled |
+| Original archive / completed-day import | Explicit actions described above | No entity |
+
+Enable an optional diagnostic under **Settings > Devices & services > Entities**:
+filter by this integration and disabled entities, open the entity, then enable
+it in its settings. These defaults apply to new registry entries; upgrades
+retain existing enabled states and user names. Entity names, event-type labels
+and errors have English and German translations. Physical sensor icons use HA
+device classes; other icons are provided by the integration.
+
+## Use cases and dashboard example
+
+- **Monitor solar production:** add the power, daily energy and total energy
+  entities to a dashboard. Use phase and MPPT measurements to compare strings
+  or phases when the inverter reports them.
+- **Track energy:** under **Settings > Dashboards > Energy**, add each inverter's
+  total-energy sensor as solar production. Power is instantaneous; total energy
+  is the cumulative kWh source used for long-term statistics.
+- **React to faults:** adapt the event automation above. The event describes an
+  observed transition; inspect the status sensor and inverter display to
+  diagnose the cause.
+- **Restore completed-day statistics:** after resolving connectivity, use the
+  bounded import action above. Review its replacement semantics before running
+  it over existing history.
+
+Example dashboard card; replace the entity IDs with your registered entities:
+
+```yaml
+type: entities
+title: Solar production
+entities:
+  - sensor.sma_123_power
+  - sensor.sma_123_energy_today
+  - sensor.sma_123_energy_total
+```
+
+## Known limitations and troubleshooting
+
+| Symptom | Checks and resolution |
+| --- | --- |
+| No device in setup search | Run setup in daylight and within radio range. Check local BlueZ/D-Bus access and Classic support. Enter the physical inverter address manually if the scan fails. BLE proxies cannot substitute for a local Classic adapter. |
+| Invalid authentication | Use the SMA user password, not the installer password or pairing PIN. Complete the password request on the existing entry during daylight. |
+| Unavailable overnight | Expected for sleeping inverters. Check the HA location/timezone if sunrise scheduling is incorrect; wait for daylight before testing radio access. |
+| Unavailable in daylight | Check inverter power/range and local adapter availability. Wait for a scheduled retry; inspect integration debug logs and the Bluetooth recovery repair if it persists. |
+| NetID or duplicate ownership repair | Follow the specific Repairs instructions before confirming reconfiguration. Separate NetID 1 entries cannot be inferred to be a single network; never remove history to solve a radio problem. |
+| Archive error | Check timezone/five-minute alignment and the 62-day bound, daylight connectivity and total-energy entity availability. An incomplete or inconsistent archive is rejected, never padded. Firmware retention and historical gaps may prevent a complete import. |
+| Large plant clock difference | Automatic adjustment refuses unsafe differences; inspect the inverter clock and timezone configuration before trying again. Daily clock checks can write inverter time within safety limits. |
+| Missing sensor | The model may not report it, or it may be a disabled diagnostic. Check the entity list including disabled entries. New values appear after a successful poll. |
+
+Polling cannot observe transitions that start and end between polls. Classic
+radio scans and recovery can affect other devices on the local adapter. Only
+the model/network stated above has verified hardware evidence; offline tests
+do not establish support for other models.
+
+For a bug report, enable debug logging from the integration entry menu,
+reproduce the issue, stop logging and download diagnostics. Include the HA and
+integration versions, inverter model, configured/effective mode, NetID,
+daylight state and exact error. Review logs for addresses, serials and names;
+diagnostic redaction does not sanitize independently captured debug logs.
+Never include passwords. Attach reports to the linked project issue tracker.
+
+## Remove an obsolete inverter
+
+Temporary absence cannot distinguish a removed inverter from a radio outage,
+so devices and history are never deleted automatically. After a **successful
+daylight poll** in which the inverter is absent, open its device page under
+**Settings > Devices & services** and use **Delete**. A live inverter, the
+connection hub, or an entry currently sleeping/failing cannot be removed this
+way. Deleting the entry remains the way to remove the complete connection.
+Review affected automations and dashboard references first. If the physical
+inverter returns, reload the entry to register it again with its serial identity.
+
+## Library quality
+
+The separate library follows the same 96% per-module and overall line/branch
+gates, with standalone protocol, cancellation, discovery and safety tests.
+Both wheel and source archive are installed and checked without Home Assistant.
+Its [API documentation](packages/sma-net2/API.md) and
+[rule mapping](packages/sma-net2/QUALITY.md) record the same Bronze/Silver/Gold
+requirements, with explicit boundaries for frontend-only rules. Changes to the
+library require a new tested PyPI release before the integration pin changes.

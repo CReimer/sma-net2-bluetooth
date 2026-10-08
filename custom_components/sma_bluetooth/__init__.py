@@ -24,6 +24,7 @@ from homeassistant.const import UnitOfEnergy
 from homeassistant.core import HomeAssistant, ServiceCall, SupportsResponse, callback
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.event import async_track_sunset
 from homeassistant.util import dt as dt_util
@@ -52,8 +53,9 @@ from .coordinator import (
     SMABluetoothConfigEntry,
     SMABluetoothCoordinator,
     deserialize_known_inverters,
+    serialize_known_inverters,
 )
-from .device import async_ensure_hub_device
+from .device import async_ensure_hub_device, hub_identifier
 from .ownership import (
     async_reconcile_ownership,
     async_refresh_overlap_issues,
@@ -268,7 +270,11 @@ async def _async_reconcile_previous_day(
             require_complete=True,
         )
         if len(imported) != len(_managed_serials(coordinator)):
-            raise HomeAssistantError("Not every SMA total-energy entity was imported")
+            raise HomeAssistantError(
+                "Not every SMA total-energy entity was imported",
+                translation_domain=DOMAIN,
+                translation_key="archive_entities",
+            )
     except (HomeAssistantError, SMAProtocolError) as err:
         _LOGGER.warning("Could not reconcile SMA archive for %s: %s", target_date, err)
         return
@@ -326,7 +332,11 @@ async def async_setup(hass: HomeAssistant, config: dict[str, Any]) -> bool:
             and (requested_entry is None or entry.entry_id == requested_entry)
         ]
         if not entries:
-            raise ServiceValidationError("No loaded SMA Bluetooth entry found")
+            raise ServiceValidationError(
+                "No loaded SMA Bluetooth entry found",
+                translation_domain=DOMAIN,
+                translation_key="no_loaded_entry",
+            )
 
         local_today = _local_today()
         imported: dict[str, int] = {}
@@ -344,7 +354,9 @@ async def async_setup(hass: HomeAssistant, config: dict[str, Any]) -> bool:
                 )
             except SMAProtocolError as err:
                 raise HomeAssistantError(
-                    f"Could not import SMA archive: {err}"
+                    f"Could not import SMA archive: {err}",
+                    translation_domain=DOMAIN,
+                    translation_key="archive_import",
                 ) from err
 
             hass.config_entries.async_update_entry(
@@ -362,20 +374,36 @@ async def async_setup(hass: HomeAssistant, config: dict[str, Any]) -> bool:
         start: datetime = call.data[CONF_START]
         end: datetime = call.data[CONF_END]
         if start.tzinfo is None or start.utcoffset() is None:
-            raise ServiceValidationError("Archive start must include a timezone")
+            raise ServiceValidationError(
+                "Archive start must include a timezone",
+                translation_domain=DOMAIN,
+                translation_key="start_timezone",
+            )
         if end.tzinfo is None or end.utcoffset() is None:
-            raise ServiceValidationError("Archive end must include a timezone")
+            raise ServiceValidationError(
+                "Archive end must include a timezone",
+                translation_domain=DOMAIN,
+                translation_key="end_timezone",
+            )
         start_timestamp = int(start.timestamp())
         end_timestamp = int(end.timestamp())
         if end_timestamp <= start_timestamp:
-            raise ServiceValidationError("Archive end must be after start")
+            raise ServiceValidationError(
+                "Archive end must be after start",
+                translation_domain=DOMAIN,
+                translation_key="end_before_start",
+            )
         if start_timestamp % 300 or end_timestamp % 300:
             raise ServiceValidationError(
-                "Archive start and end must be aligned to five-minute boundaries"
+                "Archive start and end must be aligned to five-minute boundaries",
+                translation_domain=DOMAIN,
+                translation_key="archive_alignment",
             )
         if end_timestamp - start_timestamp > MAX_ARCHIVE_DAYS * 86400 + 3600:
             raise ServiceValidationError(
-                f"Archive range cannot exceed {MAX_ARCHIVE_DAYS} days"
+                f"Archive range cannot exceed {MAX_ARCHIVE_DAYS} days",
+                translation_domain=DOMAIN,
+                translation_key="archive_range",
             )
 
         requested_entry = call.data.get(CONF_CONFIG_ENTRY_ID)
@@ -386,7 +414,11 @@ async def async_setup(hass: HomeAssistant, config: dict[str, Any]) -> bool:
             and (requested_entry is None or entry.entry_id == requested_entry)
         ]
         if not entries:
-            raise ServiceValidationError("No loaded SMA Bluetooth entry found")
+            raise ServiceValidationError(
+                "No loaded SMA Bluetooth entry found",
+                translation_domain=DOMAIN,
+                translation_key="no_loaded_entry",
+            )
 
         periods: list[tuple[int, int]] = []
         cursor = start_timestamp
@@ -405,7 +437,11 @@ async def async_setup(hass: HomeAssistant, config: dict[str, Any]) -> bool:
             try:
                 archive = await coordinator.async_read_archive(periods)
             except SMAProtocolError as err:
-                raise HomeAssistantError(f"Could not read SMA archive: {err}") from err
+                raise HomeAssistantError(
+                    f"Could not read SMA archive: {err}",
+                    translation_domain=DOMAIN,
+                    translation_key="archive_read",
+                ) from err
             inverter_response: dict[str, Any] = {}
             timestamp_sets: list[set[int]] = []
             for serial in coordinator.data:
@@ -433,7 +469,9 @@ async def async_setup(hass: HomeAssistant, config: dict[str, Any]) -> bool:
                 timestamps != timestamp_sets[0] for timestamps in timestamp_sets[1:]
             ):
                 raise HomeAssistantError(
-                    "SMA inverters returned different archive timestamps"
+                    "SMA inverters returned different archive timestamps",
+                    translation_domain=DOMAIN,
+                    translation_key="archive_timestamps",
                 )
             require_all_slots = end_timestamp <= int(_local_today().timestamp())
             complete = timestamp_series_complete(
@@ -587,4 +625,38 @@ async def async_unload_entry(
             pass
     await coordinator.async_disconnect()
     del entry.runtime_data
+    return True
+
+
+async def async_remove_config_entry_device(
+    hass: HomeAssistant, entry: SMABluetoothConfigEntry, device_entry: dr.DeviceEntry
+) -> bool:
+    """Allow explicit removal of absent inverters, never the connection hub."""
+    if hub_identifier(entry) in device_entry.identifiers:
+        return False
+    coordinator = getattr(entry, "runtime_data", None)
+    if (
+        coordinator is None
+        or not coordinator.last_update_success
+        or coordinator.sleeping
+    ):
+        return False
+    serials = {
+        serial for domain, serial in device_entry.identifiers if domain == DOMAIN
+    }
+    if serials & set(coordinator.data):
+        return False
+    # Explicit device deletion must not recreate a ghost from the night cache.
+    for serial in serials:
+        coordinator._known_inverters.pop(serial, None)
+        coordinator.owned_serials.discard(serial)
+    hass.config_entries.async_update_entry(
+        entry,
+        options={
+            **entry.options,
+            CONF_KNOWN_INVERTERS: serialize_known_inverters(
+                coordinator._known_inverters
+            ),
+        },
+    )
     return True
