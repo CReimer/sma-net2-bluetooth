@@ -108,13 +108,12 @@ maintainer.
 
 ## License and attribution
 
-The independently authored Home Assistant adapter Python files marked
-`SPDX-License-Identifier: Apache-2.0` use [Apache-2.0](LICENSES/Apache-2.0.txt),
+The independently authored Home Assistant adapter source code and configuration
+use [Apache-2.0](custom_components/sma_bluetooth/LICENSE),
 matching Home Assistant Core. See the explicit
 [component license boundary](custom_components/sma_bluetooth/LICENSE.md).
 
-The standalone `packages/sma-net2` communication library and the temporarily
-bundled `protocol.py`, `models.py` and `discovery.py` remain
+The separately distributed `packages/sma-net2` communication library remains
 [GPL-3.0-or-later](LICENSE). Files without an explicit exception also remain
 under GPL-3.0-or-later. This repository currently has mixed licenses.
 
@@ -284,11 +283,15 @@ legacy entries, follow the Repairs instructions to preserve registry ownership.
 The implementation is being checked against the Home Assistant
 [Bronze checklist](https://developers.home-assistant.io/docs/core/integration-quality-scale/checklist/).
 See [quality_scale.yaml](custom_components/sma_bluetooth/quality_scale.yaml)
-for rule-by-rule evidence and remaining upstream work. This is a **custom
-integration**, not an officially awarded Bronze integration. The official
-rating requires Home Assistant core inclusion and review. Local brand assets
-are supplied for modern Home Assistant; an upstream `sma_bluetooth` brands
-entry still needs to be accepted for the official checklist. Core also requires
-a published communication library: [packages/sma-net2](packages/sma-net2) now
-prepares the independent client, tests and release pipeline, but publication and
-the integration dependency switch are still outstanding.
+for rule-by-rule evidence. This remains a **custom integration**; Core
+submission and an official quality-tier award are not intended. Local brand
+assets are supplied for modern Home Assistant, so no upstream brands
+submission is required for this project.
+
+The communication library [sma-net2 0.1.0](https://pypi.org/project/sma-net2/0.1.0/)
+is published separately on PyPI under GPL-3.0-or-later, with wheel and source
+archive. The integration pins that version in its manifest and the test suite
+uses the published package. Its source is in [packages/sma-net2](packages/sma-net2).
+The Home Assistant adapter uses Apache-2.0. The local audit records alignment
+with the applicable Bronze requirements; it is not an official Home Assistant
+tier award.

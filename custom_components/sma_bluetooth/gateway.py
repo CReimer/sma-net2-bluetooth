@@ -16,6 +16,14 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.issue_registry import IssueSeverity
 from homeassistant.util import dt as dt_util
+from sma_net2 import (
+    SMAAuthenticationError,
+    SMAClassicClient,
+    SMAConfigurationError,
+    SMANetworkModeError,
+    SMAProtocolError,
+    SMATransportError,
+)
 
 from .const import (
     DATA_ADAPTER_GATE,
@@ -26,14 +34,6 @@ from .const import (
     RFCOMM_SESSION_ATTEMPTS,
 )
 from .daylight import daylight_schedule
-from .protocol import (
-    SMAAuthenticationError,
-    SMAClassicClient,
-    SMAConfigurationError,
-    SMANetworkModeError,
-    SMAProtocolError,
-    SMATransportError,
-)
 
 _LOGGER = logging.getLogger(__name__)
 _T = TypeVar("_T")

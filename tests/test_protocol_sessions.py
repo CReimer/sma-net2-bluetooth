@@ -3,7 +3,7 @@
 import struct
 import unittest
 from unittest.mock import AsyncMock, patch
-from custom_components.sma_bluetooth import protocol as p
+from sma_net2 import protocol as p
 
 
 class SessionTests(unittest.IsolatedAsyncioTestCase):

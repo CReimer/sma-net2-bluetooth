@@ -1,13 +1,20 @@
 # Release setup
 
-The library is not yet published. Its first release needs a PyPI project owner;
-the maintainer currently has no PyPI account. Builds and local verification do
-not require a PyPI account, token or credentials.
+Version `0.1.0` is published at https://pypi.org/project/sma-net2/0.1.0/.
+The PyPI project owner is `C-Reimer`. GitHub Trusted Publishing uses the
+publisher below; no API token is needed. The initial release tag is
+`sma-net2-v0.1.0` and its successful workflow is
+https://github.com/CReimer/sma-net2-bluetooth/actions/runs/37748199759.
 
-## One-time account and publisher setup
+Both PyPI files were compared byte-for-byte against the tested workflow
+artifacts, installed in isolated environments without Home Assistant, and
+checked with the standalone suite. The integration is verified against the
+published pinned package.
 
-1. Create an account at https://pypi.org/account/register/, verify the email
-   address, and configure the authentication required by PyPI.
+## Publisher configuration (already completed)
+
+1. Sign in to `C-Reimer` at https://pypi.org/ and complete any outstanding
+   email verification and authentication required by PyPI.
 2. On https://pypi.org/manage/account/publishing/, add a **pending publisher**
    for a new project with these exact values:
 
@@ -56,25 +63,17 @@ Then validate installation in a fresh environment from PyPI, not the editable
 checkout. Never overwrite a published version; bump the version and tag for
 subsequent releases.
 
-## Integration transition after publication
+## Integration dependency
 
-The custom integration intentionally continues to use its existing local
-protocol implementation while the library is unpublished. Do not add an
-unresolvable PyPI requirement to a released integration.
+The custom integration imports the library API and shared constants and pins
+`sma-net2==0.1.0` in its manifest. The bundled protocol/models/discovery modules
+have been removed. Home Assistant scheduling, adapter recovery, ownership,
+Recorder conversion and entity code remain in the integration. Integration CI
+installs the published pinned package through `requirements-test.txt`.
 
-After successful PyPI installation is verified:
-
-1. Replace integration imports of protocol, model and discovery implementation
-   with `sma_net2` imports, and remove the inline implementations.
-2. Import shared connection-mode and role constants from `sma_net2.const`.
-3. Pin `sma-net2==0.1.0` in the integration manifest. Keep Home Assistant-only
-   scheduling, adapter recovery, ownership, archive-to-Recorder conversion and
-   entity code in the integration.
-4. Run the full existing integration/flow suite against the published package
-   and retain the enforced 100% config-flow and existing overall coverage gates.
-5. Recheck dependency transparency, upstream branding, core tests/documentation
-   structure and contribution requirements before requesting the official tier.
-
-This release preparation does not award a Home Assistant quality tier or
-resolve Home Assistant core review. It does not change or relicense the
-protocol's GPL-3.0-or-later notices.
+For subsequent library versions, publish and verify the new version before
+updating the integration manifest and test dependency. Run the full integration
+suite and retain 100% config-flow coverage and the existing overall gates.
+This project remains a custom integration; no Core or brands submission is
+intended. The local Bronze audit does not award an official Home Assistant tier.
+The protocol remains GPL-3.0-or-later with its original attribution.

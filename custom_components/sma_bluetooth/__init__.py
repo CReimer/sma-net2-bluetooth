@@ -28,6 +28,7 @@ from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.event import async_track_sunset
 from homeassistant.util import dt as dt_util
 from homeassistant.util.unit_conversion import EnergyConverter
+from sma_net2 import SMAProtocolError
 
 from .archive import (
     completed_day_periods,
@@ -58,7 +59,6 @@ from .ownership import (
     async_refresh_overlap_issues,
     async_transfer_departing_entry,
 )
-from .protocol import SMAProtocolError
 
 SERVICE_IMPORT_ARCHIVE = "import_archive"
 SERVICE_GET_ARCHIVE = "get_archive"

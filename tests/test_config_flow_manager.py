@@ -10,8 +10,8 @@ from homeassistant.data_entry_flow import FlowResultType
 
 from custom_components.sma_bluetooth import config_flow as cf
 from custom_components.sma_bluetooth.const import DOMAIN
-from custom_components.sma_bluetooth.models import SMAInverter
-from custom_components.sma_bluetooth.protocol import SMAAuthenticationError
+from sma_net2 import SMAInverter
+from sma_net2.protocol import SMAAuthenticationError
 
 
 class ConfigFlowManagerTests(unittest.IsolatedAsyncioTestCase):

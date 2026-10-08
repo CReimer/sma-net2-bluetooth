@@ -32,8 +32,8 @@ from custom_components.sma_bluetooth.const import (
     NETWORK_ROLE_ROOT,
 )
 from custom_components.sma_bluetooth.gateway import SMADaylightError
-from custom_components.sma_bluetooth.models import SMAInverter
-from custom_components.sma_bluetooth.protocol import (
+from sma_net2 import SMAInverter
+from sma_net2.protocol import (
     SMANetworkModeError,
     SMAProtocolError,
 )
@@ -333,7 +333,7 @@ class SetupErrorTests(unittest.IsolatedAsyncioTestCase):
     async def test_permanent_errors_are_reported_and_polling_uses_options(self):
         from homeassistant.exceptions import ConfigEntryAuthFailed
 
-        from custom_components.sma_bluetooth.protocol import (
+        from sma_net2.protocol import (
             SMAAuthenticationError,
             SMAConfigurationError,
         )

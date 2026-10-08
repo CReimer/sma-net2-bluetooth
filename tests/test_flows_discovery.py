@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock, Mock, patch
 from dbus_fast import Variant
 
 from custom_components.sma_bluetooth import config_flow as cf
-from custom_components.sma_bluetooth import discovery as d
+from sma_net2 import discovery as d
 from custom_components.sma_bluetooth import repairs
 from custom_components.sma_bluetooth.const import (
     CONF_BT_ADDRESS,
@@ -19,8 +19,8 @@ from custom_components.sma_bluetooth.const import (
     EFFECTIVE_MODE_SINGLE,
 )
 from custom_components.sma_bluetooth.gateway import SMADaylightError
-from custom_components.sma_bluetooth.models import SMAInverter
-from custom_components.sma_bluetooth.protocol import (
+from sma_net2 import SMAInverter
+from sma_net2.protocol import (
     SMAAuthenticationError,
     SMANetworkModeError,
     SMAProtocolError,

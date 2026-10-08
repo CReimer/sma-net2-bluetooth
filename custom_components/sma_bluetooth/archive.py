@@ -6,7 +6,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 from itertools import pairwise
 
-from .protocol import SMAArchivePoint
+from sma_net2 import SMAArchivePoint
 
 
 def completed_day_periods(local_today: datetime, days: int) -> list[tuple[int, int]]:

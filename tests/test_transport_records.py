@@ -5,8 +5,8 @@ import struct
 from types import SimpleNamespace as NS
 import unittest
 from unittest.mock import AsyncMock, Mock, patch
-from custom_components.sma_bluetooth import protocol as p
-from custom_components.sma_bluetooth.models import SMAInverter
+from sma_net2 import protocol as p
+from sma_net2 import SMAInverter
 
 
 def record_packet(code, value=1000, size=28, attribute=None):

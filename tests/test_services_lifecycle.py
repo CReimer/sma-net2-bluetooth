@@ -10,7 +10,7 @@ from homeassistant.config_entries import ConfigEntryState
 from homeassistant.exceptions import ServiceValidationError
 
 from custom_components import sma_bluetooth as m
-from custom_components.sma_bluetooth.protocol import SMAArchivePoint, SMAProtocolError
+from sma_net2.protocol import SMAArchivePoint, SMAProtocolError
 from tests.test_coordinator_platforms import make_coordinator
 
 

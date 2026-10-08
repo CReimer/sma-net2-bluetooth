@@ -1,15 +1,17 @@
 # License and attribution
 
-The independently authored Home Assistant adapter Python files marked
-`SPDX-License-Identifier: Apache-2.0` are licensed under the Apache License,
-Version 2.0, matching Home Assistant Core. The complete text is in
-[`LICENSES/Apache-2.0.txt`](../../LICENSES/Apache-2.0.txt).
+The independently authored Home Assistant adapter source code and configuration
+in this directory are licensed under the Apache License, Version 2.0, matching
+Home Assistant Core. Python files also carry `SPDX-License-Identifier: Apache-2.0`.
+The complete text is in [`LICENSE`](LICENSE). Brand artwork is excluded; see
+[`brand/README.md`](brand/README.md).
 
-The bundled `protocol.py`, `models.py` and `discovery.py` remain licensed under
-`GPL-3.0-or-later`. They are being extracted into the standalone `sma-net2`
-package, which retains that license. The full GPL text is in
-[`LICENSE`](../../LICENSE). All files without an explicit license exception
-remain covered by the repository's GPL license.
+The device communication implementation is distributed separately in the
+`sma-net2` package under `GPL-3.0-or-later`. Its source and full license text
+are in [`packages/sma-net2`](../../packages/sma-net2). Files in this repository
+without an explicit license exception remain covered by the repository's GPL
+license. Package extraction does not remove GPL obligations for combined
+distributions.
 
 The protocol adapts work in
 [sma-bluetooth/sma-bluetooth](https://github.com/sma-bluetooth/sma-bluetooth),

@@ -17,3 +17,5 @@ coverage-report/
 packages/*/build/
 packages/*/dist/
 packages/*/.artifact-check-*/
+
+library-dist/

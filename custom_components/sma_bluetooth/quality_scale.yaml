@@ -1,5 +1,6 @@
 # Local Bronze audit. This custom integration has no official Home Assistant tier.
-# Publishing/consuming the communication library, upstream brands and core review remain outstanding.
+# Custom-integration audit only; no Core submission or official tier is intended.
+# The separate GPL communication library is published on PyPI and tested as an installed dependency.
 rules:
   action-setup:
     status: done
@@ -8,8 +9,8 @@ rules:
     status: done
     comment: coordinator.py uses a configurable interval (default/minimum 60 seconds) and daylight.py defers overnight polling until sunrise.
   brands:
-    status: todo
-    comment: Local brand/ PNG assets exist for Home Assistant 2026.3+. Official grading still requires an accepted sma_bluetooth entry in home-assistant/brands.
+    status: done
+    comment: Local brand/ PNG assets provide the custom-integration branding supported by Home Assistant 2026.3+. No upstream brands entry is intended; this local audit does not award an official Core tier.
   common-modules:
     status: done
     comment: Shared update logic is in coordinator.py, entity lifecycle and inverter identity in entity.py, and device metadata in device.py.
@@ -20,8 +21,8 @@ rules:
     status: done
     comment: User and reconfigure flows have field descriptions and a masked password selector; connection data and options are separated with v2.1 migration.
   dependency-transparency:
-    status: todo
-    comment: packages/sma-net2 prepares the standalone GPL-3.0-or-later protocol/discovery library and public build/publish CI. Publication to PyPI and switching the integration to the released requirement are pending. Core does not permit inline protocol implementations.
+    status: done
+    comment: Device communication uses the separate open-source GPL-3.0-or-later sma-net2==0.1.0 package published on PyPI with wheel, sdist, public source and issue tracker. No protocol/discovery implementation remains in the integration. CI installs the published pinned release; both published artifacts were tested in isolated environments without Home Assistant.
   docs-actions:
     status: done
     comment: README describes get_archive and import_archive fields, bounds, responses, side effects and examples.
